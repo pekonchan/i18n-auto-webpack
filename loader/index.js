@@ -8,15 +8,16 @@ const { getOptions } = require('loader-utils')
 
 const { transCode } = require('./transform.js')
 
-const { setConfig, setResource } = require('../common/collect')
+const { setConfig, setResource, getCompiledFiles, addCompiledFiles, getKey } = require('../common/collect')
 
 module.exports = function i18nTransform (code) {
     const { resourcePath } = this
     const collection = {}
-    // console.log('🚀 ~ file: extraChineseLoader.js ~ line 15 ~ i18nTransform ~ resourcePath', resourcePath)
-    const { includes = [], excludes = [], name = '' } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
+    const { includes = [], excludes = [], name = '', watch } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
+    const changeOnce = !watch && getCompiledFiles().includes(resourcePath) // 已经编译过此文件了，是否只转译一次，后续更新的代码不再转移国际化，
 
     // 存在excludes选项，若当前文件属于排除对象，则不进行转译
+    // 用indexOf而不直接用includes判断是因为excludes里有只到文件夹目录的路径，而非都是具体到文件
     if (excludes.length && excludes.some(item => resourcePath.indexOf(item) === 0)) {
         return code
     }
@@ -59,6 +60,10 @@ module.exports = function i18nTransform (code) {
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
                 if (/[\u4e00-\u9fa5]/.test(val)) {
+                    // 同一个启动程序中后续再次编译该文件，新增的词条不再转译国际化
+                    if (changeOnce && !getKey(val)) {
+                        return
+                    }
                     const key = setConfig(val)
                     collection[key] = val
                     transCode({path, val, key, calle: name})
@@ -71,6 +76,8 @@ module.exports = function i18nTransform (code) {
     const newCode = generator.default(ast, {}, code).code
 
     Object.keys(collection).length && setResource(resourcePath, collection)
+
+    addCompiledFiles(resourcePath) // 记录已经编译过一次该文件
 
     return newCode
 }
