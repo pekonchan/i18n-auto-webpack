@@ -1,0 +1,25 @@
+{
+  "name": "i18n-auto-webpack",
+  "version": "1.0.0",
+  "description": "This is a tools to help you work i18n automatically in webpack. It includs two part: plugin and loader",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pekonchan/i18n-auto-webpack.git"
+  },
+  "keywords": [
+    "i18n",
+    "webpack",
+    "webpack-loader",
+    "webpack-plugin"
+  ],
+  "author": "pekonchan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pekonchan/i18n-auto-webpack/issues"
+  },
+  "homepage": "https://github.com/pekonchan/i18n-auto-webpack#readme"
+}
