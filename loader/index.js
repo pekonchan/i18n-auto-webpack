@@ -2,9 +2,6 @@ const baseParse = require('@babel/parser')
 const traverse = require('@babel/traverse')
 const generator = require('@babel/generator')
 const { getOptions } = require('loader-utils')
-// const types = require('@babel/types')
-// const fs = require('fs')
-// const path = require('path')
 
 const { transCode } = require('./transform.js')
 
@@ -13,7 +10,14 @@ const { setConfig, setResource, getCompiledFiles, addCompiledFiles, getKey } = r
 module.exports = function i18nTransform (code) {
     const { resourcePath } = this
     const collection = {}
-    const { includes = [], excludes = [], name = '', watch } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
+    let loadedDependency = false // 是否加入了指定依赖
+    const {
+        includes = [],
+        excludes = [],
+        name = '',
+        watch,
+        dependency
+    } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
     const changeOnce = !watch && getCompiledFiles().includes(resourcePath) // 已经编译过此文件了，是否只转译一次，后续更新的代码不再转移国际化，
 
     // 存在excludes选项，若当前文件属于排除对象，则不进行转译
@@ -25,15 +29,6 @@ module.exports = function i18nTransform (code) {
     if (includes.length && includes.some(item => resourcePath.indexOf(item) !== 0)) {
         return code
     }
-    // TODO: 如何识别是否需要引入，已经引入的文件再次引入会有什么问题
-    // const hasExist = code.indexOf('@global/lang') !== -1
-    // if (!hasExist) {
-    //     code = `
-    //         const i18n = require('@global/lang').default
-    //         ${code}
-    //     `
-    // }
-    // let hasLangModule = false
     let ast = baseParse.parse(code, {
         sourceType: 'unambiguous'
     })
@@ -51,11 +46,25 @@ module.exports = function i18nTransform (code) {
         //         }
         //     }
         // },
-        // ImportDeclaration (path) {
-        //     if (path.node.source.value === '@global/lang') {
-        //         hasLangModule = true
-        //     }
-        // },
+        // Finds if the user's dependency is in the import declaration
+        ImportDeclaration (path) {
+            if (!dependency || loadedDependency) {
+                return
+            }
+            if (dependency.value === path.node.source.value) {
+                loadedDependency = true
+            }
+        },
+        // Finds if the user's dependencies are in the require declaration
+        CallExpression (path) {
+            if (!dependency || loadedDependency || path.node.callee.name !== 'require') {
+                return
+            }
+            const args = path.node.arguments
+            if (args.length && dependency.value === args[0].value) {
+                loadedDependency = true
+            }
+        },
         StringLiteral (path) {
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
@@ -72,10 +81,22 @@ module.exports = function i18nTransform (code) {
         }
     }
     traverse.default(ast, visitor)
+
+    // Whether to collect the language to be internationalized
+    const hasLang = Object.keys(collection).length
+    // If user set the dependency, which wants to import, but now hasn't imported, and has language to be internationalized
+    if (dependency && hasLang && !loadedDependency) {
+        // Add the import declaration
+        const i18nImport =  `import ${dependency.name} from '${dependency.value}'`
+        const i18nImportAst = baseParse.parse(i18nImport, {
+            sourceType: 'module'
+        })
+        ast.program.body = [].concat(i18nImportAst.program.body, ast.program.body)
+    }
     // 生成代码
     const newCode = generator.default(ast, {}, code).code
 
-    Object.keys(collection).length && setResource(resourcePath, collection)
+    hasLang && setResource(resourcePath, collection)
 
     addCompiledFiles(resourcePath) // 记录已经编译过一次该文件
 
