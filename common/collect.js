@@ -1,5 +1,6 @@
 const rootPath = process.cwd()
 const { resolve } = require('path')
+
 let config = {}
 try {
     config = require(rootPath + '/i18nauto.config.js')
@@ -7,13 +8,13 @@ try {
     console.warn('Lack of "i18nauto.config.js" file, use the default config...')
 }
 const {
-    entry,
+    entry = resolve(rootPath, './lang'),
     output: {
-        filename = 'zh',
+        filename = 'zh.json',
         path = resolve(rootPath, './lang')
     } = {}
 } = config || {}
-const outputPath = resolve(path, `./${filename}.json`)
+const outputPath = resolve(path, filename)
 
 let zhConfig = {} // 存中文词条的key value count情况配置表
 try {
@@ -28,7 +29,7 @@ try {
         }
     }
 } catch (e) {
-    console.error('Lack of entry setting')
+    console.error(e)
 }
 
 const resourceMap = {} // 记录文件各词条情况映射表

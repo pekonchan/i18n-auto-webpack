@@ -1,10 +1,14 @@
-const { getConfig, output, getResource } = require('../common/collect')
+const { getConfig, output: globalSettingOutput, getResource } = require('../common/collect')
 const fs = require('fs')
 const { resolve } = require('path')
 
-const createConfig = (sourceMapPath) => {
+/**
+ * Create language config
+ * @param {Object} output
+ */
+const createConfig = (output) => {
     const zhConfig = getConfig()
-    const { path, filename } = output
+    const { path, filename } = output || globalSettingOutput
     let content = {}
     for (const key in zhConfig) {
         if (Object.prototype.hasOwnProperty.call(zhConfig, key)) {
@@ -16,13 +20,18 @@ const createConfig = (sourceMapPath) => {
         if (err) {
             throw err
         }
-        fs.writeFile(resolve(path, `./${filename}.json`), content, err => {
+        fs.writeFile(resolve(path, filename), content, err => {
             if (err) {
                 return console.error(err)
             }
         })
     })
 }
+
+/**
+ * Create the language config sourcemap
+ * @param {Object} param0 
+ */
 const createSourceMap = ({path, filename}) => {
     let mapSource = getResource()
     mapSource = JSON.stringify(mapSource)
@@ -38,6 +47,18 @@ const createSourceMap = ({path, filename}) => {
     })
 }
 
+/**
+ * The plugin emit job
+ * @param {Object} output
+ * @param {Object} sourceMap
+ */
+const createEmit = (output, sourceMap) => {
+    const { need, config } = sourceMap
+    createConfig(output)
+    need && createSourceMap(config)
+    isBuildConfig = true
+}
+
 let once = false
 let isBuildConfig = false
 
@@ -48,10 +69,7 @@ class I18nConfigPlugin {
 
     apply (complier) {
         const {
-            // output: {
-            //     filename = 'zh',
-            //     path = resolve(process.cwd(), './lang')
-            // } = {},
+            output,
             watch,
             sourceMap,
             // impress = false
@@ -83,15 +101,15 @@ class I18nConfigPlugin {
             filename && (sourceMapConfig.filename = filename)
         }
 
-        complier.plugin('done', (compilation) => {
+        complier.plugin('done', (stats) => {
             console.log('🚀 ~ file: plugin.js ~ line 88 ~ I18nConfigPlugin ~ complier.plugin ~ done')
 
             // 第一次启动工程就生成配置文件
             if (!once) {
-                // createConfig(path, filename)
-                createConfig()
-                needSourceMap && createSourceMap(sourceMapConfig)
-                isBuildConfig = true
+                createEmit(output, {
+                    need: needSourceMap,
+                    config: sourceMapConfig
+                })
                 once = true
             // 如果开通监听模式
             } else if (watchMode) {
@@ -100,10 +118,10 @@ class I18nConfigPlugin {
                     isBuildConfig = false
                     return
                 } else {
-                    // createConfig(path, filename)
-                    createConfig()
-                    needSourceMap && createSourceMap(sourceMapConfig)
-                    isBuildConfig = true
+                    createEmit(output, {
+                        need: needSourceMap,
+                        config: sourceMapConfig
+                    })
                 }
             }
         })
