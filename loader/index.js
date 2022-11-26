@@ -9,16 +9,18 @@ const { setConfig, setResource, getCompiledFiles, addCompiledFiles, getKey } = r
 
 module.exports = function i18nTransform (code) {
     const { resourcePath } = this
-    const collection = {}
+    const collection = {} // 收集到本文件本次编译中需要转译国际化的词条
     let loadedDependency = false // 是否加入了指定依赖
     const {
         includes = [],
         excludes = [],
-        name = '',
+        name = '', // 替换代码中词条的实现国际化的函数名
         watch,
         dependency
     } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
-    const changeOnce = !watch && getCompiledFiles().includes(resourcePath) // 已经编译过此文件了，是否只转译一次，后续更新的代码不再转移国际化，
+    
+    // feat: watch字段的功能：已经编译过此文件了，是否只转译一次，后续更新的代码不再转译国际化，
+    const changeOnce = !watch && getCompiledFiles().includes(resourcePath)
 
     // 存在excludes选项，若当前文件属于排除对象，则不进行转译
     // 用indexOf而不直接用includes判断是因为excludes里有只到文件夹目录的路径，而非都是具体到文件
@@ -69,7 +71,7 @@ module.exports = function i18nTransform (code) {
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
                 if (/[\u4e00-\u9fa5]/.test(val)) {
-                    // 同一个启动程序中后续再次编译该文件，新增的词条不再转译国际化
+                    // feat watch: 同一个启动程序中后续再次编译该文件，新增的词条不再转译国际化
                     if (changeOnce && !getKey(val)) {
                         return
                     }
@@ -96,7 +98,7 @@ module.exports = function i18nTransform (code) {
     // 生成代码
     const newCode = generator.default(ast, {}, code).code
 
-    hasLang && setResource(resourcePath, collection)
+    hasLang && setResource(resourcePath, collection) // create the latest collection to this file in sourcemap variable
 
     addCompiledFiles(resourcePath) // 记录已经编译过一次该文件
 
