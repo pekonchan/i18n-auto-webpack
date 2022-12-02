@@ -5,7 +5,13 @@ const { getOptions } = require('loader-utils')
 
 const { transCode } = require('./transform.js')
 
-const { setConfig, setResource, getCompiledFiles, addCompiledFiles, getKey } = require('../common/collect')
+const {
+    setConfig,
+    setCurrentCompileResourceMap,
+    addCompiledFiles,
+    getKey,
+    getCompileDone,
+} = require('../common/collect')
 
 module.exports = function i18nTransform (code) {
     const { resourcePath } = this
@@ -19,8 +25,9 @@ module.exports = function i18nTransform (code) {
         dependency
     } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
     
+    const hasCompiled = getCompileDone()
     // feat: watch字段的功能：已经编译过此文件了，是否只转译一次，后续更新的代码不再转译国际化，
-    const changeOnce = !watch && getCompiledFiles().includes(resourcePath)
+    const changeOnce = !watch && hasCompiled
 
     // 存在excludes选项，若当前文件属于排除对象，则不进行转译
     // 用indexOf而不直接用includes判断是因为excludes里有只到文件夹目录的路径，而非都是具体到文件
@@ -34,6 +41,7 @@ module.exports = function i18nTransform (code) {
     let ast = baseParse.parse(code, {
         sourceType: 'unambiguous'
     })
+
     const visitor = {
         // ObjectProperty (path) {
         //     if (path.node.type === 'ObjectProperty' && path.node.key.type === 'StringLiteral') {
@@ -75,7 +83,7 @@ module.exports = function i18nTransform (code) {
                     if (changeOnce && !getKey(val)) {
                         return
                     }
-                    const key = setConfig(val)
+                    const key = setConfig(val, resourcePath)
                     collection[key] = val
                     transCode({path, val, key, calle: name})
                 }
@@ -86,6 +94,7 @@ module.exports = function i18nTransform (code) {
 
     // Whether to collect the language to be internationalized
     const hasLang = Object.keys(collection).length
+
     // If user set the dependency, which wants to import, but now hasn't imported, and has language to be internationalized
     if (dependency && hasLang && !loadedDependency) {
         // Add the import declaration
@@ -98,7 +107,7 @@ module.exports = function i18nTransform (code) {
     // 生成代码
     const newCode = generator.default(ast, {}, code).code
 
-    hasLang && setResource(resourcePath, collection) // create the latest collection to this file in sourcemap variable
+    hasLang && setCurrentCompileResourceMap(resourcePath, collection) // create the latest collection to this file in sourcemap variable
 
     addCompiledFiles(resourcePath) // 记录已经编译过一次该文件
 

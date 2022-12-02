@@ -1,4 +1,12 @@
-const { getConfig, output: globalSettingOutput, getResource } = require('../common/collect')
+const {
+    getConfig,
+    output: globalSettingOutput,
+    getResource,
+    setCompileDone,
+    setCompiledFiles,
+    updateResourceMap,
+    clearEmptyConfig,
+} = require('../common/collect')
 const fs = require('fs')
 const { resolve } = require('path')
 
@@ -12,7 +20,7 @@ const createConfig = (output) => {
     let content = {}
     for (const key in zhConfig) {
         if (Object.prototype.hasOwnProperty.call(zhConfig, key)) {
-            content[key] = zhConfig[key].value
+            content[key] = zhConfig[key].value || ''
         }
     }
     content = JSON.stringify(content)
@@ -106,6 +114,10 @@ class I18nConfigPlugin {
 
             // 第一次启动工程就生成配置文件
             if (!once) {
+                updateResourceMap()
+                clearEmptyConfig()
+                setCompiledFiles([])
+                setCompileDone(true)
                 createEmit(output, {
                     need: needSourceMap,
                     config: sourceMapConfig
@@ -118,6 +130,9 @@ class I18nConfigPlugin {
                     isBuildConfig = false
                     return
                 } else {
+                    updateResourceMap()
+                    setCompiledFiles([])
+                    setCompileDone(true)
                     createEmit(output, {
                         need: needSourceMap,
                         config: sourceMapConfig
