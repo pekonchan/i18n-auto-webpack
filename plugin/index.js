@@ -1,11 +1,11 @@
 const {
-    getConfig,
     output: globalSettingOutput,
     getResource,
     setCompileDone,
     setCompiledFiles,
     updateResourceMap,
-    clearEmptyConfig,
+    createConfigbyMap,
+    updateConfig,
 } = require('../common/collect')
 const fs = require('fs')
 const { resolve } = require('path')
@@ -15,7 +15,7 @@ const { resolve } = require('path')
  * @param {Object} output
  */
 const createConfig = (output) => {
-    const zhConfig = getConfig()
+    const zhConfig = createConfigbyMap()
     const { path, filename } = output || globalSettingOutput
     let content = {}
     for (const key in zhConfig) {
@@ -23,6 +23,7 @@ const createConfig = (output) => {
             content[key] = zhConfig[key].value || ''
         }
     }
+    updateConfig(content)
     content = JSON.stringify(content)
     fs.mkdir(path, { recursive: true }, err => {
         if (err) {
@@ -115,7 +116,6 @@ class I18nConfigPlugin {
             // 第一次启动工程就生成配置文件
             if (!once) {
                 updateResourceMap()
-                clearEmptyConfig()
                 setCompiledFiles([])
                 setCompileDone(true)
                 createEmit(output, {
@@ -132,7 +132,6 @@ class I18nConfigPlugin {
                 } else {
                     updateResourceMap()
                     setCompiledFiles([])
-                    setCompileDone(true)
                     createEmit(output, {
                         need: needSourceMap,
                         config: sourceMapConfig

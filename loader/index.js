@@ -15,7 +15,7 @@ const {
 
 module.exports = function i18nTransform (code) {
     const { resourcePath } = this
-    const collection = {} // 收集到本文件本次编译中需要转译国际化的词条
+    const collection = [] // 收集到本文件本次编译中需要转译国际化的词条
     let loadedDependency = false // 是否加入了指定依赖
     const {
         includes = [],
@@ -83,8 +83,8 @@ module.exports = function i18nTransform (code) {
                     if (changeOnce && !getKey(val)) {
                         return
                     }
-                    const key = setConfig(val, resourcePath)
-                    collection[key] = val
+                    const key = setConfig(val)
+                    collection.push({[key]: val})
                     transCode({path, val, key, calle: name})
                 }
             }
@@ -93,7 +93,7 @@ module.exports = function i18nTransform (code) {
     traverse.default(ast, visitor)
 
     // Whether to collect the language to be internationalized
-    const hasLang = Object.keys(collection).length
+    const hasLang = collection.length
 
     // If user set the dependency, which wants to import, but now hasn't imported, and has language to be internationalized
     if (dependency && hasLang && !loadedDependency) {

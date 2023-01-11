@@ -23,10 +23,7 @@ try {
         if (!Object.prototype.hasOwnProperty.call(exsitConfig, key)) {
             return
         }
-        zhConfig[key] = {
-            value: exsitConfig[key],
-            count: 0 // 从已存在的配置文件中获取的话，除非是有生成map文件，不然都是为0，后续在loader编译时会根据实际情况得出真实的count值。  TODO：map文件的逻辑还没实现
-        }
+        zhConfig[key] = exsitConfig[key]
     }
 } catch (e) {
     console.error(e)
@@ -42,18 +39,12 @@ let firstCompileDone = false // 开发环境下，是否已经完成了初次的
 /**
  * 设置词条
  * @param {String} value 词条
- * @param {String} resourcePath 词条所在文件路径
  * @returns {String} 编号
  */
-const setConfig = (value, resourcePath) => {
+const setConfig = (value) => {
     let currentKey = getKey(value) // 找出当前设置的词条是否已经存在
     // 已存在
     if (currentKey) {
-        // 若初次编译 或 经过初次编译后对于当前文件是属于新加入的词条，计数+1
-        const record = resourceMap[resourcePath] || {}
-        if (!(Object.values(record).includes(value))) {
-            zhConfig[currentKey].count++
-        }
         return currentKey
     // 不存在，插入一条新词条
     } else {
@@ -62,10 +53,7 @@ const setConfig = (value, resourcePath) => {
         let isAdded = false
         for (let i = 0; i < max; i++) {
             if (!zhConfig[i]) {
-                zhConfig[i] = {
-                    value,
-                    count: 1
-                }
+                zhConfig[i] = value
                 isAdded = true
                 currentKey = i
                 break
@@ -86,23 +74,13 @@ const addConfig = (key, value) => {
     if (zhConfig[key]) {
         return addConfig(++key, value)
     } else {
-        zhConfig[key] = {
-            value,
-            count: 1
-        }
+        zhConfig[key] = value
         return key
     }
 }
 
-const editConfig = (key, value) => {
-    zhConfig[key] = {
-        value,
-        count: 1
-    }
-}
-
-const getConfig = () => {
-    return JSON.parse(JSON.stringify(zhConfig))
+const updateConfig = (value) => {
+    zhConfig = value
 }
 
 /**
@@ -117,7 +95,7 @@ const getKey = (value) => {
         if (!Object.prototype.hasOwnProperty.call(zhConfig, k)) {
             return
         }
-        if (zhConfig[k].value === value) {
+        if (zhConfig[k] === value) {
             currentKey = k
             break
         }
@@ -128,32 +106,43 @@ const getKey = (value) => {
 /**
  * 设置当前编译文件词条配置映射文件
  * @param {String} path 编译文件路径
- * @param {Object} config 词条配置
+ * @param {Array} collection 收集到的词条配置
  */
-const setCurrentCompileResourceMap = (path, config) => {
+const setCurrentCompileResourceMap = (path, collection) => {
+    // 将数组形式的配置转换成对象形式，主要是数组形式里可能会有重复的词条配置，转成对象配置时去重，并加上count字段识别在该文件中出现多少次
+    let config = {}
+    collection.forEach(item => {
+        const key = Object.keys(item)[0]
+        const val = item[key]
+        if (!config[key]) {
+            config[key] = {
+                value: val,
+                count: 1
+            }
+        } else if (config[key].value === val) {
+            config[key].count++
+        }
+    })
     // 同一个编译流程中，可能多次执行了同一个文件的loader，一个文件的不同部分执行了同一个loader，那么把多次执行收集到的词条信息整理一起；若没有则直接赋值
-    const temp = currentCompileResourceMap[path] || {}
-    currentCompileResourceMap[path] = compiledFiles.includes(path) ? {...temp, ...config} : config
+    if (compiledFiles.includes(path)) {
+        const temp = currentCompileResourceMap[path] || {}
+        for (const key in temp) {
+            if (config[key]) {
+                config[key].count += temp[key].count
+            } else {
+                config[key] = temp[key]
+            }
+        }
+    }
+    currentCompileResourceMap[path] = config
 }
 /**
  * 根据编译过程中收集到的词条信息更新到最终的映射表中
  */
 const updateResourceMap = () => {
-    // 非初次编译
-    if (firstCompileDone) {
-        compiledFiles.forEach(path => {
-            const lastKeywords = Object.values(resourceMap[path])
-            const newKeywords = Object.values(currentCompileResourceMap[path])
-            const deletedKeywords = lastKeywords.filter(item => !newKeywords.some(sub => sub === item))
-             // 非初次编译，找出后面因为修改了文件删除了哪些词条，需要把对应配置表中的置空
-            deletedKeywords.forEach(item => {
-                reduceConfig(item)
-            })
-        })
-    }
     // 统一更新本次编译收集到的映射信息
-    for (const key in currentCompileResourceMap) {
-        resourceMap[key] = currentCompileResourceMap[key]
+    for (const path in currentCompileResourceMap) {
+        resourceMap[path] = currentCompileResourceMap[path]
     }
     currentCompileResourceMap = {}
 }
@@ -196,45 +185,6 @@ const setCompiledFiles = (val) => {
 }
 
 /**
- * 递减配置
- * @param {*} value 
- * @param {*} key 
- * @returns 
- */
-const reduceConfig = (value, key) => {
-    key = key || getKey(value)
-    if (key && zhConfig[key]) {
-        zhConfig[key].count--
-        if (zhConfig[key].count === 0) {
-            delete zhConfig[key]
-        }
-    }
-}
-
-/**
- * 递增配置
- * @param {*} value 
- * @param {*} key 
- */
-const increaseConfig = (value, key) => {
-    key = key || getKey(value)
-    if (key && zhConfig[key]) {
-        zhConfig[key].count++
-    }
-}
-/**
- * 找出配置表中count为0的词条，代表在编译前就已经有词条删掉了，需要清空
- */
-const clearEmptyConfig = () => {
-    const copy = JSON.parse(JSON.stringify(zhConfig))
-    for (const key in copy) {
-        if (copy[key].count === 0) {
-            delete zhConfig[key]
-        }
-    }
-}
-
-/**
  * 设置firstCompileDone
  * @param {*} val 
  */
@@ -249,10 +199,27 @@ const getCompileDone = () => {
     return firstCompileDone
 }
 
+/**
+ * 根据映射表生成最新的词条配置表
+ * @returns Object 词条配置
+ */
+const createConfigbyMap = () => {
+    let config = {}
+    for (const path in resourceMap) {
+        for (const key in resourceMap[path]) {
+            const thisMap = resourceMap[path]
+            if (!config[key]) {
+                config[key] = JSON.parse(JSON.stringify(thisMap[key]))
+            } else if (config[key].value === thisMap[key].value) {
+                config[key].count += thisMap[key].count
+            }
+        }
+    }
+    return config
+}
+
 module.exports = {
     setConfig,
-    editConfig,
-    getConfig,
     setCurrentCompileResourceMap,
     updateResourceMap,
     getResource,
@@ -262,12 +229,10 @@ module.exports = {
         filename
     },
     addCompiledFiles,
-    getCompiledFiles,
     setCompiledFiles,
     getKey,
-    reduceConfig,
     setCompileDone,
     getCompileDone,
-    increaseConfig,
-    clearEmptyConfig,
+    createConfigbyMap,
+    updateConfig,
 }
