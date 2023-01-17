@@ -25,6 +25,7 @@
   "dependencies": {
     "@babel/parser": "^7.20.2",
     "@babel/traverse": "^7.20.1",
-    "loader-utils": "^1.4.0"
+    "loader-utils": "^1.4.0",
+    "tencentcloud-sdk-nodejs-tmt": "^4.0.524"
   }
 }
