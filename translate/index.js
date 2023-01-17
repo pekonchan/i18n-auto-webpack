@@ -14,10 +14,6 @@ const tencentcloud = require("tencentcloud-sdk-nodejs-tmt")
 const TmtClient = tencentcloud.tmt.v20180321.Client
 
 const clientConfig = {
-    // credential: {
-    //     secretId: "AKID7A7wc7PWRA4mJfrpaAnFWbUEm9KsNrJs",
-    //     secretKey: "cL8ugQ84w2MMJ7nQwGNSPNGhy3299wYz",
-    // }
     credential: {
         secretId,
         secretKey,
