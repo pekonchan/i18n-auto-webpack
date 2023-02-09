@@ -220,13 +220,13 @@ const updateResourceMap = () => {
     
     // 首次编译时，通过配置表判断是否有变更
     if (!firstCompileDone) {
-        const newConfig = createConfigbyMap
+        const newConfig = createConfigbyMap()
         const oldConfig = localeWordConfig
-        if (newConfig.length !== oldConfig.length) {
+        if (Object.keys(newConfig).length !== Object.keys(oldConfig).length) {
             configNeedUpdate = true
         } else {
             for (const key in newConfig) {
-                if (newConfig[key] !== oldConfig[key]) {
+                if (newConfig[key].value !== oldConfig[key]) {
                     configNeedUpdate = true
                     break
                 }
@@ -294,7 +294,7 @@ const getCompileDone = () => {
 }
 
 /**
- * 根据映射表生成最新的词条配置表
+ * 根据映射表生成最新的词条配置表，key: {value, count}形式
  * @returns Object 词条配置
  */
 const createConfigbyMap = () => {
