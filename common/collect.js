@@ -2,7 +2,7 @@ const rootPath = process.cwd()
 const { resolve } = require('path')
 
 let globalSetting = {}
-let localeWordConfig = {} // 存需要国际化的词条的key value count情况配置表
+let localeWordConfig = {} // 存需要国际化的词条的key value情况配置表
 const resourceMap = {} // 记录文件各词条情况映射表
 let currentCompileResourceMap = {} // 记录本次编译过程中涉及到的文件的词条映射表，最终在编译完成后将此份资料update到上面的resourceMap里。因为resourceMap在编译过程中loader里需要不断用来做历史备份数据的比对，所以不能在编译过程中实时update
 let compiledFiles = [] // 本次编译中，编译过的文件路径集合。等本次编译完成，会被清空
@@ -14,7 +14,7 @@ let firstCompileDone = false // 开发环境下，是否已经完成了初次的
 function init () {
     // 默认设置
     const defaultSetting = {
-        entry: resolve(rootPath, './lang'),
+        entry: resolve(rootPath, './lang/zh.json'),
         output: {
             filename: 'zh.json',
             path: resolve(rootPath, './lang')
@@ -44,7 +44,7 @@ function init () {
             }
             const value = defaultSetting[key]
             if (value && value.constructor === Object) {
-                Object.assign(defaultSetting, setting[key])
+                Object.assign(defaultSetting[key], setting[key])
             } else {
                 defaultSetting[key] = setting[key]
             }
@@ -56,7 +56,7 @@ function init () {
     
     // 根据已有词条配置表初始化本地词条配置变量
     try {
-        const exsitConfig = require(defaultSetting.entry) // TODO: 这个entry是不是错了
+        const exsitConfig = require(globalSetting.entry)
         for (const key in exsitConfig) {
             if (!Object.prototype.hasOwnProperty.call(exsitConfig, key)) {
                 return
