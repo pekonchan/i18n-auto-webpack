@@ -10,11 +10,12 @@ const {
 const {
     translate: globalSettingTranslate
 } = globalSetting
-const { translateTo } = require('../translate/index.js')
+const { createTranslate } = require('../translate/index.js')
 const fs = require('fs')
 const { resolve } = require('path')
 
 let once = false // 记录是否首次构建完成
+let translating = false // 是否正在翻译，因为翻译接口有请求1秒内请求次数限制，所以正在翻译的过程中不要再发翻译请求了
 
 const createFile = (content, path, filename) => {
     fs.mkdir(path, { recursive: true }, err => {
@@ -59,53 +60,19 @@ const createSourceMap = ({path, filename}) => {
 
 /**
  * 生成翻译词条配置文件
- * @param {String} param0 path - 生成文件的路径。若插件实例中未设置，则采用全局配置文件中的设置
- * @param {Array} param1 lang - 指定翻译的语言。若插件实例中未设置，则采用全局配置文件中的设置
- * @param {Function} param3 nameRule - 生成文件的名字规则，参数为lang具体元素。若插件实例中未设置，则采用全局配置文件中的设置
  */
-const createTranslate = ({
-    path = globalSettingTranslate.path,
-    lang = globalSettingTranslate.lang,
-    nameRule = globalSettingTranslate.nameRule
-}) => {
-    console.log('🚀 ~ file: index.js:69 ~ nameRule', nameRule);
-    console.log('🚀 ~ file: index.js:69 ~ globalSettingTranslate', globalSettingTranslate);
-    console.log('🚀 ~ file: index.js:69 ~ typeof nameRule', globalSettingTranslate.nameRule);
-    const localeConfig = createConfigbyMap()
-    // 根据每个翻译语言生成对应的翻译文件
-    lang.forEach(item => {
-        const fileName = nameRule(item)
-        const filePath = path + '/' + fileName
-        fs.access(filePath, fs.constants.F_OK, err => {
-            let translateWords = [] // 等待翻译的词条
-            let translateKeys = [] // 等待翻译的词条对应的key
-            // 若不存在
-            if (err) {
-                for (const key in localeConfig) {
-                    translateWords.push(localeConfig[key])
-                    translateKeys.push(key)
-                }
-            } else {
-                const langConfig = require(filePath)
-                const deletedKeys = Object.keys(langConfig).filter(key => !Object.keys(localeConfig).some(localeKey => localeKey === key))
-                deletedKeys.forEach(key => {
-                    delete langConfig[key]
-                })
-                for (const key in localeConfig) {
-                    if (!langConfig[key]) {
-                        translateWords.push(localeConfig[key])
-                        translateKeys.push(key)
-                    }
-                }
-            }
-            const translateRes = translateTo(translateWords)
-            translateKeys.forEach((key, index) => {
-                langConfig[key] = translateRes[index]
-            })
-            createFile(JSON.stringify(langConfig), path, fileName)
-        })
-        
-    })
+const handleTranslate = async (translation) => {
+    const localeConfigOrigin = createConfigbyMap()
+    // 格式化词条配置，转成{key: value}格式
+    const localeConfig = {}
+    for (const key in localeConfigOrigin) {
+        localeConfig[key] = localeConfigOrigin[key].value
+    }
+    translating = true
+    try {
+        await createTranslate(translation, {text: localeConfig})
+    } catch (e) {}
+    translating = false
 }
 
 /**
@@ -123,16 +90,20 @@ const createEmit = ({output, sourceMap, translate}, fileChange) => {
     if (configNeedUpdate) {
         // ==== 生成词条配置文件 ====
         createConfig(output)
+    }
 
-        // ==== 生成翻译词条配置文件 ====
-        // 若new插件时设置了on，则根据插件实例的设置来
+    // ==== 生成翻译词条配置文件 ====
+    // 若new插件时设置了on，则根据插件实例的设置来
+    // 已经有在翻译中的，就不要再进行新一轮的翻译工作了（翻译接口限制，无奈之举，无法做到实时翻译）
+    if (!translating) {
         if (translate.on != null) {
-            translate.on && createTranslate(translate)
+            translate.on && handleTranslate(translate)
         // 否则根据全局配置文件的设置来
         } else if (globalSettingTranslate.on) {
-            createTranslate(translate)
+            handleTranslate(translate)
         }
     }
+    
     // ==== 生成映射关系文件 ====
     // 若设置了生成映射文件 且 需要更新时才 生成/更新 映射文件
     if (sourceMap.on && sourceMapNeedUpdate) {
