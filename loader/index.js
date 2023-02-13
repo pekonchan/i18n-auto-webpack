@@ -16,6 +16,7 @@ const {
 module.exports = function i18nTransform (code) {
     const { resourcePath } = this
     const collection = [] // 收集到本文件本次编译中需要转译国际化的词条
+    const keyInCodes = [] // 收集代码中直接写国际化方法使用到的key
     let loadedDependency = false // 是否加入了指定依赖
     const {
         includes = [],
@@ -65,15 +66,45 @@ module.exports = function i18nTransform (code) {
                 loadedDependency = true
             }
         },
-        // Finds if the user's dependencies are in the require declaration
+        
         CallExpression (path) {
-            if (!dependency || loadedDependency || path.node.callee.name !== 'require') {
+            // Start: Finds if the user's dependencies are in the require declaration
+            // 当需要引入依赖 且 该文件中的require函数尚未引入指定依赖
+            if (dependency && !loadedDependency && path.node.callee.name === 'require') {
+                const args = path.node.arguments
+                if (args.length && dependency.value === args[0].value) {
+                    loadedDependency = true
+                }
                 return
             }
-            const args = path.node.arguments
-            if (args.length && dependency.value === args[0].value) {
-                loadedDependency = true
+            // End
+
+            // Start: 找出是否有用国际化函数直接写编码使用配置文件的代码
+            // 有的话就不能删除掉词条配置表文件中的相关词条，例如$t('10')，则在词条配置表中key为10的词条要保留，不能删除
+            let wholeCallName = '' // 调用方法的整体名字写法，例如 a.b.c('10')，则结果应该为'a.b.c'，因为dependcy客户就是可能直接传的链式调用字符串
+            // 递归找出整体的方法调用写法
+            const recurName = (node) => {
+                if (node.type === 'MemberExpression') {
+                    recurName(node.object)
+                    if (node.property.type === 'Identifier') {
+                        wholeCallName += ('.' + node.property.name)
+                    }
+                } else if (node.type === 'Identifier') {
+                    wholeCallName += ('.' + node.name)
+                }
             }
+            recurName(path.node.callee)
+            wholeCallName = wholeCallName.substring(1)
+            // 如果调用方法名写法与denpency传的一样
+            if (wholeCallName === name) {
+                // 把调用参数的key存起来
+                const arg0 = path.node.arguments[0]
+                if (arg0.type === 'StringLiteral') {
+                    keyInCodes.push(arg0.value)
+                }
+            }
+            // End
+            
         },
         StringLiteral (path) {
             if (path.node.type === 'StringLiteral') {
@@ -107,7 +138,7 @@ module.exports = function i18nTransform (code) {
     // 生成代码
     const newCode = generator.default(ast, {}, code).code
 
-    setCurrentCompileResourceMap(resourcePath, collection) // create the latest collection to this file in sourcemap variable
+    setCurrentCompileResourceMap(resourcePath, collection, keyInCodes) // create the latest collection to this file in sourcemap variable
 
     addCompiledFiles(resourcePath) // 记录已经编译过一次该文件
 
