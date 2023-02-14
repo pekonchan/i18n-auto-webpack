@@ -3,7 +3,7 @@ const traverse = require('@babel/traverse')
 const generator = require('@babel/generator')
 const { getOptions } = require('loader-utils')
 
-const { transCode } = require('./transform.js')
+const { transCode, localeWordPattern } = require('./transform.js')
 
 const {
     setConfig,
@@ -109,14 +109,22 @@ module.exports = function i18nTransform (code) {
         StringLiteral (path) {
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
+                // 判断是否有中文才执行里面的逻辑，试过不加这个判断，但是运行下面脚本会卡住，不知道出现什么问题，也没报错啥的，能肯定的是正则匹配那块出了问题
                 if (/[\u4e00-\u9fa5]/.test(val)) {
-                    // feat watch: 同一个启动程序中后续再次编译该文件，新增的词条不再转译国际化
-                    if (changeOnce && !getKey(val)) {
-                        return
+                    const res = val.match(localeWordPattern)
+                    if (res && res.length) {
+                        const wordKeyMap = {}
+                        res.forEach(word => {
+                            // feat watch: 同一个启动程序中后续再次编译该文件，新增的词条不再转译国际化
+                            if (changeOnce && !getKey(word)) {
+                                return
+                            }
+                            const key = setConfig(word)
+                            collection.push({[key]: word})
+                            wordKeyMap[word] = key
+                        })
+                        transCode({path, originValue: val, wordKeyMap, calle: name})
                     }
-                    const key = setConfig(val)
-                    collection.push({[key]: val})
-                    transCode({path, val, key, calle: name})
                 }
             }
         }
