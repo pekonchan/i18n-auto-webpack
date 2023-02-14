@@ -1,5 +1,5 @@
 const {
-    output: globalSettingOutput,
+    globalSetting,
     getResource,
     setCompileDone,
     setCompiledFiles,
@@ -7,24 +7,17 @@ const {
     createConfigbyMap,
     updateConfig,
 } = require('../common/collect')
+const {
+    translate: globalSettingTranslate
+} = globalSetting
+const { createTranslate } = require('../translate/index.js')
 const fs = require('fs')
 const { resolve } = require('path')
 
-/**
- * Create language config
- * @param {Object} output
- */
-const createConfig = (output) => {
-    const zhConfig = createConfigbyMap()
-    const { path, filename } = output || globalSettingOutput
-    let content = {}
-    for (const key in zhConfig) {
-        if (Object.prototype.hasOwnProperty.call(zhConfig, key)) {
-            content[key] = zhConfig[key].value || ''
-        }
-    }
-    updateConfig(content)
-    content = JSON.stringify(content)
+let once = false // 记录是否首次构建完成
+let translating = false // 是否正在翻译，因为翻译接口有请求1秒内请求次数限制，所以正在翻译的过程中不要再发翻译请求了
+
+const createFile = (content, path, filename) => {
     fs.mkdir(path, { recursive: true }, err => {
         if (err) {
             throw err
@@ -38,39 +31,88 @@ const createConfig = (output) => {
 }
 
 /**
+ * Create language config
+ * @param {Object} output
+ */
+const createConfig = (output) => {
+    const localeWordConfig = createConfigbyMap()
+    const { path, filename } = output || globalSetting.output
+    let content = {}
+    for (const key in localeWordConfig) {
+        if (Object.prototype.hasOwnProperty.call(localeWordConfig, key)) {
+            content[key] = localeWordConfig[key].value || ''
+        }
+    }
+    updateConfig(content)
+    content = JSON.stringify(content)
+    createFile(content, path, filename)
+}
+
+/**
  * Create the language config sourcemap
  * @param {Object} param0 
  */
 const createSourceMap = ({path, filename}) => {
     let mapSource = getResource()
     mapSource = JSON.stringify(mapSource)
-    fs.mkdir(path, { recursive: true }, err => {
-        if (err) {
-            throw err
-        }
-        fs.writeFile(resolve(path, filename), mapSource, err => {
-            if (err) {
-                return console.error(err)
-            }
-        })
-    })
+    createFile(mapSource, path, filename)
+}
+
+/**
+ * 生成翻译词条配置文件
+ */
+const handleTranslate = async (translation) => {
+    const localeConfigOrigin = createConfigbyMap()
+    // 格式化词条配置，转成{key: value}格式
+    const localeConfig = {}
+    for (const key in localeConfigOrigin) {
+        localeConfig[key] = localeConfigOrigin[key].value
+    }
+    translating = true
+    try {
+        await createTranslate(translation, {text: localeConfig})
+    } catch (e) {}
+    translating = false
 }
 
 /**
  * The plugin emit job
  * @param {Object} output
  * @param {Object} sourceMap
+ * @param {Boolean} fileChange - Wether the file should update
  */
-const createEmit = (output, sourceMap) => {
-    const { need, config } = sourceMap
-    createConfig(output)
-    need && createSourceMap(config)
-    isBuildConfig = true
+const createEmit = ({output, sourceMap, translate}, fileChange) => {
+    const {
+        configNeedUpdate,
+        sourceMapNeedUpdate,
+    } = fileChange
+    // 需要更新词条时（词条发生了变化）
+    if (configNeedUpdate) {
+        // ==== 生成词条配置文件 ====
+        createConfig(output)
+    }
+
+    // ==== 生成翻译词条配置文件 ====
+    // 若new插件时设置了on，则根据插件实例的设置来
+    // 已经有在翻译中的，就不要再进行新一轮的翻译工作了（翻译接口限制，无奈之举，无法做到实时翻译）
+    if (!translating) {
+        if (translate.on != null) {
+            translate.on && handleTranslate(translate)
+        // 否则根据全局配置文件的设置来
+        } else if (globalSettingTranslate.on) {
+            handleTranslate(translate)
+        }
+    }
+    
+    // ==== 生成映射关系文件 ====
+    // 若设置了生成映射文件 且 需要更新时才 生成/更新 映射文件
+    if (sourceMap.on && sourceMapNeedUpdate) {
+        createSourceMap({
+            path: sourceMap.path,
+            filename: sourceMap.filename
+        })
+    }
 }
-
-let once = false
-let isBuildConfig = false
-
 class I18nConfigPlugin {
     constructor (options) {
         this.options = options
@@ -81,64 +123,91 @@ class I18nConfigPlugin {
             output,
             watch,
             sourceMap,
-            // impress = false
-        } = this.options || {}
+            translate,
+        } = this.initOption()
 
-        // 监听模式下的设置
-        let watchMode = false
-        let watchImpact = false
-        if (typeof watch === 'boolean') {
-            watchMode = watch
-        } else if (watch) {
-            const { on, impact } = watch
-            watchMode = !!on
-            watchImpact = impact
-        }
-
-        // 溯源配置
-        let needSourceMap = false
-        let sourceMapConfig = {
-            path: resolve(process.cwd(), './lang'),
-            filename: 'zh.sourcemap.json'
-        }
-        if (typeof sourceMap === 'boolean') {
-            needSourceMap = sourceMap
-        } else if (sourceMap) {
-            const { on, path, filename } = sourceMap
-            needSourceMap = !!on
-            path && (sourceMapConfig.path = path)
-            filename && (sourceMapConfig.filename = filename)
-        }
+        complier.plugin('invalid', (fileName, changeTime) => {
+            console.log('====== invalid')
+            console.log('🚀 ~ file: index.js:147 ~ I18nConfigPlugin ~ complier.plugin ~ changeTime', changeTime);
+            console.log('🚀 ~ file: index.js:147 ~ I18nConfigPlugin ~ complier.plugin ~ fileName', fileName);
+        })
 
         complier.plugin('done', (stats) => {
             console.log('🚀 ~ file: plugin.js ~ line 88 ~ I18nConfigPlugin ~ complier.plugin ~ done')
 
-            // 第一次启动工程就生成配置文件
-            if (!once) {
-                updateResourceMap()
+            const handleData = () => {
+                const fileChange = updateResourceMap()
                 setCompiledFiles([])
                 setCompileDone(true)
-                createEmit(output, {
-                    need: needSourceMap,
-                    config: sourceMapConfig
-                })
+                createEmit({
+                    output,
+                    sourceMap,
+                    translate
+                }, fileChange)
+            }
+
+            // 第一次启动工程就生成配置文件
+            if (!once) {
+                handleData()
                 once = true
             // 如果开通监听模式
-            } else if (watchMode) {
-                // 是改了配置文件引起的重新构建
-                if (watchImpact && isBuildConfig) {
-                    isBuildConfig = false
-                    return
-                } else {
-                    updateResourceMap()
-                    setCompiledFiles([])
-                    createEmit(output, {
-                        need: needSourceMap,
-                        config: sourceMapConfig
-                    })
-                }
+            } else if (watch.on) {
+                handleData()
             }
         })
+    }
+
+    initOption () {
+        const {
+            output,
+            watch,
+            sourceMap,
+            translate,
+            // impress = false
+        } = this.options || {}
+
+        // 监听模式下的设置
+        let watchConfig = {
+            on: false,
+        }
+        if (typeof watch === 'boolean') {
+            watchConfig.on = watch
+        } else if (watch) {
+            const { on } = watch
+            watchConfig.on = !!on
+        }
+
+        // 溯源配置
+        let sourceMapConfig = {
+            on: false,
+            path: resolve(process.cwd(), './lang'),
+            filename: 'zh.sourcemap.json'
+        }
+        if (typeof sourceMap === 'boolean') {
+            sourceMapConfig.on = sourceMap
+        } else if (sourceMap) {
+            const { on, path, filename } = sourceMap
+            sourceMapConfig.on = !!on
+            path && (sourceMapConfig.path = path)
+            filename && (sourceMapConfig.filename = filename)
+        }
+
+        // 翻译配置
+        let translateConfig = {}
+        if (typeof translate === 'boolean') {
+            translateConfig.on = translate
+        } else if (translate) {
+            for (const setting in translate) {
+                translateConfig[setting] = translate[setting]
+            }
+        }
+
+        return {
+            output,
+            watch: watchConfig,
+            sourceMap: sourceMapConfig,
+            translate: translateConfig,
+        }
     }
 }
 

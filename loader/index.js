@@ -107,7 +107,7 @@ module.exports = function i18nTransform (code) {
     // 生成代码
     const newCode = generator.default(ast, {}, code).code
 
-    hasLang && setCurrentCompileResourceMap(resourcePath, collection) // create the latest collection to this file in sourcemap variable
+    setCurrentCompileResourceMap(resourcePath, collection) // create the latest collection to this file in sourcemap variable
 
     addCompiledFiles(resourcePath) // 记录已经编译过一次该文件
 
