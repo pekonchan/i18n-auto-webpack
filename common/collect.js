@@ -140,14 +140,34 @@ const getKey = (value) => {
  * 设置当前编译文件词条配置映射文件
  * @param {String} path 编译文件路径
  * @param {Array} collection 收集到的词条配置
+ * @param {Array} keyInCodes 收集到的写在代码里的key
  */
-const setCurrentCompileResourceMap = (path, collection) => {
+const setCurrentCompileResourceMap = (path, collection, keyInCodes) => {
+    let config = {}
+    // 根据key把对应的词条信息存起来，避免因为找不到代码中词条而删除了实际需要的词条。
+    // 需要注意的是一个逻辑关系，既然keyInCodes有值，必然存在本地词条配置文件，不然写代码中的key无依据，这种情况是不符合逻辑的
+    if (keyInCodes.length) {
+        keyInCodes.forEach(key => {
+            // 如果本地文件也没有这个词条，则不需要处理
+            if (!localeWordConfig[key]) {
+                return
+            }
+            // 同样key也可能是重复的，因为代码中可能多次使用到，因此注意count的计算
+            if (!config[key]) {
+                config[key] = {
+                    value: localeWordConfig[key],
+                    count: 1
+                }
+            } else {
+                config[key].count++
+            }
+        })
     // 本次编译没词条 且 是初次编译
-    if (collection.length === 0 && !firstCompileDone) {
+    } else if (collection.length === 0 && !firstCompileDone) {
         return
     }
+    
     // 将数组形式的配置转换成对象形式，主要是数组形式里可能会有重复的词条配置，转成对象配置时去重，并加上count字段识别在该文件中出现多少次
-    let config = {}
     collection.forEach(item => {
         const key = Object.keys(item)[0]
         const val = item[key]
@@ -195,6 +215,7 @@ const updateResourceMap = () => {
                 configNeedUpdate = true
                 sourceMapNeedUpdate = true
             } else {
+                // 若记录的count也不等，也需要更新
                 for (const key in newPathtMap) {
                     if (newPathtMap[key].count !== lastPathMap[key].count) {
                         sourceMapNeedUpdate = true
