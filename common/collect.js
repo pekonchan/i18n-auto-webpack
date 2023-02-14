@@ -64,7 +64,7 @@ function init () {
             localeWordConfig[key] = exsitConfig[key]
         }
     } catch (e) {
-        console.error(e)
+        console.error('There is no locale keyword file' + globalSetting.entry)
     }
 }
 init()
@@ -242,16 +242,22 @@ const updateResourceMap = () => {
     // 首次编译时，通过配置表判断是否有变更
     if (!firstCompileDone) {
         const newConfig = createConfigbyMap()
-        const oldConfig = localeWordConfig
-        if (Object.keys(newConfig).length !== Object.keys(oldConfig).length) {
-            configNeedUpdate = true
-        } else {
-            for (const key in newConfig) {
-                if (newConfig[key].value !== oldConfig[key]) {
-                    configNeedUpdate = true
-                    break
+        let oldConfig = {}
+        try {
+            oldConfig = require(globalSetting.entry)
+            if (Object.keys(newConfig).length !== Object.keys(oldConfig).length) {
+                configNeedUpdate = true
+            } else {
+                for (const key in newConfig) {
+                    if (newConfig[key].value !== oldConfig[key]) {
+                        configNeedUpdate = true
+                        break
+                    }
                 }
             }
+        // 一般报错是因为不存在入口文件
+        } catch (e) {
+            configNeedUpdate = true
         }
         sourceMapNeedUpdate = true // 目前没有根据已有sourcemap文件来做相关处理。
     }
