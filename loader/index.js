@@ -23,7 +23,7 @@ module.exports = function i18nTransform (code) {
         excludes = [],
         name = '', // 替换代码中词条的实现国际化的函数名
         watch,
-        dependency
+        dependency // {name, value, objectPattern}格式
     } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
     
     const hasCompiled = getCompileDone()
@@ -59,26 +59,67 @@ module.exports = function i18nTransform (code) {
         // },
         // Finds if the user's dependency is in the import declaration
         ImportDeclaration (path) {
+            // 若没依赖项 或 已经引入依赖，就不用处理
             if (!dependency || loadedDependency) {
                 return
             }
-            if (dependency.value === path.node.source.value) {
-                loadedDependency = true
-            }
-        },
-        
-        CallExpression (path) {
-            // Start: Finds if the user's dependencies are in the require declaration
-            // 当需要引入依赖 且 该文件中的require函数尚未引入指定依赖
-            if (dependency && !loadedDependency && path.node.callee.name === 'require') {
-                const args = path.node.arguments
-                if (args.length && dependency.value === args[0].value) {
-                    loadedDependency = true
-                }
+            // 若依赖的路径不符，也不用进行下一步判断
+            if (dependency.value !== path.node.source.value) {
                 return
             }
-            // End
-
+            // 存在两种形式的判断
+            const matched = path.node.specifiers.some(item => {
+                // 一种是import xx from 'yy' 的形式，现在要检查xx是否跟传入的依赖的名字相同
+                if (item.type === 'ImportDefaultSpecifier') {
+                    return item.local.name === dependency.name
+                // 一种是import {xx} from 'yy' 的形式，现在要检查xx是否跟传入的依赖的名字相同
+                } else if (item.type === 'ImportSpecifier') {
+                    return item.imported.name === dependency.name
+                }
+            })
+            // 匹配上，代表已经引入了所需的依赖了
+            matched && (loadedDependency = true)
+        },
+        // 目标是 cosnt xx = require('xxx') ，cosnt {xx} = require('xxx') 以这个目标来检查
+        VariableDeclarator (path) {
+            // 若没依赖项 或 已经引入依赖，就不用处理
+            if (!dependency || loadedDependency) {
+                return
+            }
+            const initNode = path.node.init
+            if (!initNode || initNode.type !== 'CallExpression') {
+                return
+            }
+            let valueMatched = false // 引入路径是否匹配上
+            let nameMatched = false // 引入变量是否匹配上
+            // // START: 检查require部分
+            const initNodeCallee = initNode.callee
+            if (initNodeCallee.type === 'Identifier' && initNodeCallee.name === 'require') {
+                const args = path.node.arguments
+                // 检查路径是否满足
+                if (args.length && dependency.value === args[0].value) {
+                    valueMatched = true
+                }
+            }
+            // START: 检查等号前部分
+            // 若是解构形式
+            if (dependency.objectPattern) {
+                if (path.node.id.type === 'ObjectPattern') {
+                    path.node.id.properties.forEach(item => {
+                        if (item.key.type === 'Identifier' && item.key.name === dependency.name) {
+                            nameMatched = true
+                        }
+                    })
+                }
+            // 若是普通变量形式
+            } else {
+                if (path.node.id.type === 'Identifier' && path.node.id.name === dependency.name) {
+                    nameMatched = true
+                }
+            }
+            valueMatched && nameMatched && (loadedDependency = true)
+        },
+        CallExpression (path) {
             // Start: 找出是否有用国际化函数直接写编码使用配置文件的代码
             // 有的话就不能删除掉词条配置表文件中的相关词条，例如$t('10')，则在词条配置表中key为10的词条要保留，不能删除
             let wholeCallName = '' // 调用方法的整体名字写法，例如 a.b.c('10')，则结果应该为'a.b.c'，因为dependcy客户就是可能直接传的链式调用字符串
@@ -137,7 +178,8 @@ module.exports = function i18nTransform (code) {
     // If user set the dependency, which wants to import, but now hasn't imported, and has language to be internationalized
     if (dependency && hasLang && !loadedDependency) {
         // Add the import declaration
-        const i18nImport =  `import ${dependency.name} from '${dependency.value}'`
+        const { name, objectPattern } = dependency
+        const i18nImport =  `import ${objectPattern ? ('{' + name + '}') : name} from '${dependency.value}'`
         const i18nImportAst = baseParse.parse(i18nImport, {
             sourceType: 'module'
         })
