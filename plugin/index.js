@@ -10,25 +10,12 @@ const {
 const {
     translate: globalSettingTranslate
 } = globalSetting
+const { createFile } = require('../common/utils')
 const { createTranslate } = require('../translate/index.js')
-const fs = require('fs')
 const { resolve } = require('path')
 
 let once = false // 记录是否首次构建完成
 let translating = false // 是否正在翻译，因为翻译接口有请求1秒内请求次数限制，所以正在翻译的过程中不要再发翻译请求了
-
-const createFile = (content, path, filename) => {
-    fs.mkdir(path, { recursive: true }, err => {
-        if (err) {
-            throw err
-        }
-        fs.writeFile(resolve(path, filename), content, err => {
-            if (err) {
-                return console.error(err)
-            }
-        })
-    })
-}
 
 /**
  * Create language config
@@ -45,7 +32,7 @@ const createConfig = (output) => {
     }
     updateConfig(content)
     content = JSON.stringify(content)
-    createFile(content, path, filename)
+    createFile({content, path, filename})
 }
 
 /**
@@ -55,7 +42,7 @@ const createConfig = (output) => {
 const createSourceMap = ({path, filename}) => {
     let mapSource = getResource()
     mapSource = JSON.stringify(mapSource)
-    createFile(mapSource, path, filename)
+    createFile({content: mapSource, path, filename})
 }
 
 /**
@@ -126,15 +113,7 @@ class I18nConfigPlugin {
             translate,
         } = this.initOption()
 
-        complier.plugin('invalid', (fileName, changeTime) => {
-            console.log('====== invalid')
-            console.log('🚀 ~ file: index.js:147 ~ I18nConfigPlugin ~ complier.plugin ~ changeTime', changeTime);
-            console.log('🚀 ~ file: index.js:147 ~ I18nConfigPlugin ~ complier.plugin ~ fileName', fileName);
-        })
-
-        complier.plugin('done', (stats) => {
-            console.log('🚀 ~ file: plugin.js ~ line 88 ~ I18nConfigPlugin ~ complier.plugin ~ done')
-
+        this.hook(complier, 'done', 'tap', () => {
             const handleData = () => {
                 const fileChange = updateResourceMap()
                 setCompiledFiles([])
@@ -207,6 +186,21 @@ class I18nConfigPlugin {
             watch: watchConfig,
             sourceMap: sourceMapConfig,
             translate: translateConfig,
+        }
+    }
+
+    /**
+     * 兼容新版webpack和旧版的 订阅方法
+     * @param {Object} target 使用钩子的对象，如compiler compliation
+     * @param {String} name 钩子名字
+     * @param {String} method hook的订阅方法
+     * @param {Function} cb 回调函数
+     */
+    hook (target, name, method, cb) {
+        if (target.hooks) {
+            target.hooks[name][method]('i18nAutoPlugin', cb)
+        } else {
+            target.plugin(name, cb)
         }
     }
 }

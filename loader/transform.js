@@ -166,7 +166,23 @@ function transCode ({path, originValue, wordKeyMap, calle}) {
     }
 }
 
+/**
+ * 根据数组里的元素组成binaryExpression
+ * @param {Array} nodeList - 每个元素都是要ast node格式
+ * @returns ast node
+ */
+function createBinaryExp (nodeList) {
+    if (nodeList.length > 2) {
+        const lastIndex = nodeList.length -1
+        const right = nodeList[lastIndex]
+        const left = createBinaryExp(nodeList.slice(0, lastIndex))
+        return types.binaryExpression('+', left, right)
+    } else {
+        return types.binaryExpression('+', nodeList[0], nodeList[1])
+    }
+}
+
 module.exports = {
     transCode,
-    localeWordPattern
+    localeWordPattern,
 }

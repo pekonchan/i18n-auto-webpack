@@ -3,7 +3,10 @@ const traverse = require('@babel/traverse')
 const generator = require('@babel/generator')
 const { getOptions } = require('loader-utils')
 
-const { transCode, localeWordPattern } = require('./transform.js')
+const {
+    transCode,
+    localeWordPattern,
+} = require('./transform.js')
 
 const {
     setConfig,
@@ -24,7 +27,7 @@ module.exports = function i18nTransform (code) {
         name = '', // 替换代码中词条的实现国际化的函数名
         watch,
         dependency // {name, value, objectPattern}格式
-    } = getOptions(this) || {} // TODO: getOptions好像有版本要求，高版本好像没有这个方法了
+    } = getOptions(this) || {}
     
     const hasCompiled = getCompileDone()
     // feat: watch字段的功能：已经编译过此文件了，是否只转译一次，后续更新的代码不再转译国际化，
@@ -36,7 +39,7 @@ module.exports = function i18nTransform (code) {
         return code
     }
     // 存在includes选项，若当前文件不属于包含对象，则不进行转译
-    if (includes.length && includes.some(item => resourcePath.indexOf(item) !== 0)) {
+    if (includes.length && includes.every(item => resourcePath.indexOf(item) !== 0)) {
         return code
     }
     let ast = baseParse.parse(code, {
@@ -148,18 +151,23 @@ module.exports = function i18nTransform (code) {
             
         },
         StringLiteral (path) {
+            // 这个字符串节点是在import里就不用处理了
+            // TODO: 实际上还应判断require里的路径也不用处理，但是略过麻烦。事实上建议文件或文件夹不要包含中文才对
+            if (path.parent.type === 'ImportDeclaration') {
+                return
+            }
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
                 // 判断是否有中文才执行里面的逻辑，试过不加这个判断，但是运行下面脚本会卡住，不知道出现什么问题，也没报错啥的，能肯定的是正则匹配那块出了问题
                 if (/[\u4e00-\u9fa5]/.test(val)) {
                     const res = val.match(localeWordPattern)
                     if (res && res.length) {
+                        // feat watch: 同一个启动程序中后续再次编译该文件，新增的词条不再转译国际化
+                        if (changeOnce && res.some(word => !getKey(word))) {
+                            return
+                        }
                         const wordKeyMap = {}
                         res.forEach(word => {
-                            // feat watch: 同一个启动程序中后续再次编译该文件，新增的词条不再转译国际化
-                            if (changeOnce && !getKey(word)) {
-                                return
-                            }
                             const key = setConfig(word)
                             collection.push({[key]: word})
                             wordKeyMap[word] = key

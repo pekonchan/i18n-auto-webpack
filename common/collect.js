@@ -40,7 +40,7 @@ function init () {
         const setting = require(rootPath + '/i18nauto.config.js')
         for (const key in defaultSetting) {
             if (!setting[key]) {
-                return
+                continue
             }
             const value = defaultSetting[key]
             if (value && value.constructor === Object) {
@@ -88,7 +88,7 @@ const setConfig = (value) => {
             if (!localeWordConfig[i]) {
                 localeWordConfig[i] = value
                 isAdded = true
-                currentKey = i
+                currentKey = (i + '')
                 break
             }
         }
@@ -108,7 +108,7 @@ const addConfig = (key, value) => {
         return addConfig(++key, value)
     } else {
         localeWordConfig[key] = value
-        return key
+        return key + ''
     }
 }
 
