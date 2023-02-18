@@ -152,6 +152,7 @@ function transAssign({path, originValue}) {
 
 function transCode ({path, originValue, wordKeyMap, calle}) {
     switch (path.parent.type) {
+        case 'NewExpression':
         case 'CallExpression': transMethodArg(arguments[0]); break
         case 'ArrayExpression': transArrayEle(arguments[0]); break
         case 'VariableDeclarator': transVarDec(arguments[0]); break

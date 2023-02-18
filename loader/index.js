@@ -168,6 +168,33 @@ module.exports = function i18nTransform (code) {
                     }
                 }
             }
+        },
+        TemplateLiteral (path) {
+            // 先判断里面有没有中文，没有则不做任何处理
+            const hasWord = path.node.quasis.some(item => /[\u4e00-\u9fa5]/.test(item.value.raw))
+            if (!hasWord) {
+                return
+            }
+            // 将模板字符串改成普通的字符串连接写法，组成源代码写法
+            let sections = path.node.expressions.map(node => {
+                return {
+                    start: node.start,
+                    value: generator.default(node).code
+                }
+            })
+            path.node.quasis.forEach(node => {
+                const string = node.value.raw
+                if (string) {
+                    const element = {
+                        start: node.start,
+                        value: '"' + string + '"'
+                    }
+                    const unshiftIndex = sections.findIndex(item => node.start < item.start)
+                    unshiftIndex === -1 ? sections.push(element) : sections.splice(unshiftIndex, 0, element)
+                }
+            })
+            const code = sections.map(item => item.value).join('+')
+            path.replaceWithSourceString(code)
         }
     }
     traverse.default(ast, visitor)
