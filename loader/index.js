@@ -26,7 +26,8 @@ module.exports = function i18nTransform (code) {
         excludes = [],
         name = '', // 替换代码中词条的实现国际化的函数名
         watch,
-        dependency // {name, value, objectPattern}格式
+        dependency, // {name, value, objectPattern}格式
+        transform = true, // 是否需要转换代码
     } = getOptions(this) || {}
     
     const hasCompiled = getCompileDone()
@@ -62,8 +63,8 @@ module.exports = function i18nTransform (code) {
         // },
         // Finds if the user's dependency is in the import declaration
         ImportDeclaration (path) {
-            // 若没依赖项 或 已经引入依赖，就不用处理
-            if (!dependency || loadedDependency) {
+            // 若不需要转换代码 或 没依赖项 或 已经引入依赖，就不用处理
+            if (!transform || !dependency || loadedDependency) {
                 return
             }
             // 若依赖的路径不符，也不用进行下一步判断
@@ -85,8 +86,8 @@ module.exports = function i18nTransform (code) {
         },
         // 目标是 cosnt xx = require('xxx') ，cosnt {xx} = require('xxx') 以这个目标来检查
         VariableDeclarator (path) {
-            // 若没依赖项 或 已经引入依赖，就不用处理
-            if (!dependency || loadedDependency) {
+            // 若不需要转换代码 或 没依赖项 或 已经引入依赖，就不用处理
+            if (!transform || !dependency || loadedDependency) {
                 return
             }
             const initNode = path.node.init
@@ -172,7 +173,7 @@ module.exports = function i18nTransform (code) {
                             collection.push({[key]: word})
                             wordKeyMap[word] = key
                         })
-                        transCode({path, originValue: val, wordKeyMap, calle: name})
+                        transform && transCode({path, originValue: val, wordKeyMap, calle: name})
                     }
                 }
             }
@@ -211,7 +212,7 @@ module.exports = function i18nTransform (code) {
     const hasLang = collection.length
 
     // If user set the dependency, which wants to import, but now hasn't imported, and has language to be internationalized
-    if (dependency && hasLang && !loadedDependency) {
+    if (transform && dependency && hasLang && !loadedDependency) {
         // Add the import declaration
         const { name, objectPattern } = dependency
         const i18nImport =  `import ${objectPattern ? ('{' + name + '}') : name} from '${dependency.value}'`
