@@ -154,8 +154,16 @@ module.exports = function i18nTransform (code) {
         StringLiteral (path) {
             // 这个字符串节点是在import里就不用处理了
             // TODO: 实际上还应判断require里的路径也不用处理，但是略过麻烦。事实上建议文件或文件夹不要包含中文才对
-            if (path.parent.type === 'ImportDeclaration') {
+            const { type: parentType, callee: parentCallee } = path.parent
+            if (parentType === 'ImportDeclaration') {
                 return
+            }
+            // 排除掉console系列函数里的字符串（大部分过滤掉，少部分还是可能会存在，现在是只针对console.xx()的格式进行过滤）
+            if (parentType === 'CallExpression' && parentCallee.type === 'MemberExpression') {
+                const parentCalleeObject = parentCallee.object
+                if (parentCalleeObject.type === 'Identifier' && parentCalleeObject.name === 'console') {
+                    return
+                }
             }
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
