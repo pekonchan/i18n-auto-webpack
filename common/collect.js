@@ -13,12 +13,13 @@ let firstCompileDone = false // 开发环境下，是否已经完成了初次的
  */
 function init () {
     // 默认设置
+    const defaultFile = {
+        filename: 'zh.json',
+        path: resolve(rootPath, './lang')
+    }
     const defaultSetting = {
-        entry: resolve(rootPath, './lang/zh.json'),
-        output: {
-            filename: 'zh.json',
-            path: resolve(rootPath, './lang')
-        },
+        entry: { ...defaultFile },
+        output: { ...defaultFile },
         translate: {
             on: false, // 是否开启翻译
             lang: ['en'], // 要翻译成哪些语言
@@ -38,9 +39,13 @@ function init () {
     // 读取全局配置文件i18nauto.config.js，把里面用户设置的内容跟默认设置进行合并
     try {
         const setting = require(rootPath + '/i18nauto.config.js')
+        // 设置了entry但是没有设置output，默认output跟entry保持一致
+        if (setting.entry && !setting.output) {
+            Object.assign(defaultSetting.output, setting.entry)
+         }
         for (const key in defaultSetting) {
             if (!setting[key]) {
-                return
+                continue
             }
             const value = defaultSetting[key]
             if (value && value.constructor === Object) {
@@ -53,10 +58,14 @@ function init () {
     } catch (e) {
         console.warn('Lack of "i18nauto.config.js" file, use the default config...')
     }
+
+    const {path: entryPath, filename} = globalSetting.entry
+    const entryFile = resolve(entryPath, filename)
+    globalSetting.entryFile = entryFile
     
     // 根据已有词条配置表初始化本地词条配置变量
     try {
-        const exsitConfig = require(globalSetting.entry)
+        const exsitConfig = require(entryFile)
         for (const key in exsitConfig) {
             if (!Object.prototype.hasOwnProperty.call(exsitConfig, key)) {
                 return
@@ -64,7 +73,7 @@ function init () {
             localeWordConfig[key] = exsitConfig[key]
         }
     } catch (e) {
-        console.error('There is no locale keyword file' + globalSetting.entry)
+        console.error('There is no locale keyword file ' + entryFile)
     }
 }
 init()
@@ -88,7 +97,7 @@ const setConfig = (value) => {
             if (!localeWordConfig[i]) {
                 localeWordConfig[i] = value
                 isAdded = true
-                currentKey = i
+                currentKey = (i + '')
                 break
             }
         }
@@ -108,7 +117,7 @@ const addConfig = (key, value) => {
         return addConfig(++key, value)
     } else {
         localeWordConfig[key] = value
-        return key
+        return key + ''
     }
 }
 
@@ -244,7 +253,7 @@ const updateResourceMap = () => {
         const newConfig = createConfigbyMap()
         let oldConfig = {}
         try {
-            oldConfig = require(globalSetting.entry)
+            oldConfig = require(globalSetting.entryFile)
             if (Object.keys(newConfig).length !== Object.keys(oldConfig).length) {
                 configNeedUpdate = true
             } else {
