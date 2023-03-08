@@ -1,7 +1,7 @@
-// let i18nAutoLoader = require('./loader')
-let i18nAutoPlugin = require('./plugin')
+const i18nAutoPlugin = require('./plugin')
+const translate = require('./translate')
 
 module.exports = {
-    // i18nAutoLoader,
-    i18nAutoPlugin
+    i18nAutoPlugin,
+    translate,
 }

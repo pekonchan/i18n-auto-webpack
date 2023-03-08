@@ -48,19 +48,6 @@ module.exports = function i18nTransform (code) {
     })
 
     const visitor = {
-        // ObjectProperty (path) {
-        //     if (path.node.type === 'ObjectProperty' && path.node.key.type === 'StringLiteral') {
-        //         if (/[\u4e00-\u9fa5]/.test(path.node.key.value)) {
-        //             path.node.key = types.callExpression(
-        //                 types.identifier('$t'),
-        //                 [
-        //                     types.stringLiteral('message.hh')
-        //                 ]
-        //             )
-        //             path.node.computed = true
-        //         }
-        //     }
-        // },
         // Finds if the user's dependency is in the import declaration
         ImportDeclaration (path) {
             // 若不需要转换代码 或 没依赖项 或 已经引入依赖，就不用处理
