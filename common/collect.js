@@ -27,6 +27,13 @@ function init () {
             nameRule (lang) { // 生成的翻译文件名
                 return `${lang}.json`
             },
+            // startTotal和endTotal的作用是
+            // 因为腾讯翻译api一个月有免费的翻译文本数量限制，最多5百万字符，若超出，则需要付费了
+            // 而这里设置startTotal，表示你已经使用了多少字符额度了，本次启动服务触发的翻译字符数，将基于这个额度上进行计算
+            // 当达到了指定的endTotal额度限制时，就不再触发翻译请求了。默认值就是5百万字符，不想限制传Infinity
+            // 注意，startTotal只会从本次启动服务（如启动了dev-server）基于它进行累计计算。我们并不会知道之前的服务你使用了多少额度，所以你可能每次启动服务的时候都需要修改这个startTotal
+            startTotal: 0,
+            endTotal: 5000000,
             // 以下字段对标腾讯云的机器翻译说明，腾讯云机器翻译接口所需 https://cloud.tencent.com/document/api/551/40566
             // 且以下字段只能设置全局配置文件i18nauto.config.js中，不能设置在插件实例options中
             secretId: '', // If translate on, secretId is required

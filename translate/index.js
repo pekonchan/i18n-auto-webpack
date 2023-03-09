@@ -206,6 +206,9 @@ const createTranslate = (target, source, needFile = true) => {
                 }
                 // 有需要翻译的
                 if (Object.keys(translateWordConfig).length) {
+                    if (!validateLimit(translateWordConfig)) {
+                        return reject(`translate ${item} failed: The terms that need to be translated exceed the free quota for characters!`)
+                    }
                     try {
                         const translateRes = await translateTo({
                             target: item,
@@ -236,6 +239,23 @@ const createTranslate = (target, source, needFile = true) => {
         // 递归执行
         translateLang(0)
     })
+}
+
+function validateLimit (textConfig) {
+    const { startTotal, endTotal } = globalSettingTranslate
+    if (endTotal === Infinity) {
+        return true
+    }
+    let len = 0
+    for (const key in textConfig) {
+        len += textConfig[key].length
+    }
+    const total = startTotal + len
+    if (total > endTotal) {
+        return false
+    }
+    globalSettingTranslate.startTotal = total
+    return true
 }
 
 
