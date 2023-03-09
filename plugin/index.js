@@ -57,7 +57,9 @@ const handleTranslate = async (translation) => {
     translating = true
     try {
         await createTranslate(translation, {text: localeConfig})
-    } catch (e) {}
+    } catch (e) {
+        console.error(e)
+    }
     translating = false
 }
 

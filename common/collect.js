@@ -26,6 +26,8 @@ function init () {
             nameRule (lang) {
                 return `${lang}.json`
             },
+            startTotal: 0,
+            endTotal: 5000000,
             secretId: '', // If translate on, secretId is required
             secretKey: '', // If translate on, secretKey is required
             region: 'ap-beijing',
