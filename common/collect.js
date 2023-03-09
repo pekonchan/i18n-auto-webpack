@@ -23,12 +23,14 @@ function init () {
         translate: {
             on: false, // 是否开启翻译
             lang: ['en'], // 要翻译成哪些语言
-            path: resolve(process.cwd(), './lang'), // 生成的翻译文件所在目录
+            path: defaultFile.path, // 生成的翻译文件所在目录
             nameRule (lang) { // 生成的翻译文件名
                 return `${lang}.json`
             },
             // 以下字段对标腾讯云的机器翻译说明，腾讯云机器翻译接口所需 https://cloud.tencent.com/document/api/551/40566
             // 且以下字段只能设置全局配置文件i18nauto.config.js中，不能设置在插件实例options中
+            secretId: '', // If translate on, secretId is required
+            secretKey: '', // If translate on, secretKey is required
             region: 'ap-beijing', // 对哪个地区的语言进行翻译
             endpoint: 'tmt.tencentcloudapi.com', // 接口请求地址
             source: 'zh', // 要进行翻译的语言
@@ -42,7 +44,7 @@ function init () {
         // 设置了entry但是没有设置output，默认output跟entry保持一致
         if (setting.entry && !setting.output) {
             Object.assign(defaultSetting.output, setting.entry)
-         }
+        }
         for (const key in defaultSetting) {
             if (!setting[key]) {
                 continue
@@ -53,6 +55,10 @@ function init () {
             } else {
                 defaultSetting[key] = setting[key]
             }
+        }
+        // 如果设置开启翻译，且 没指定生成翻译文件的地址，则保持跟output的地址一致
+        if (defaultSetting.translate.on && !setting.translate.path) {
+            defaultSetting.translate.path = defaultSetting.output.path
         }
         globalSetting = defaultSetting
     } catch (e) {
