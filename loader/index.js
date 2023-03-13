@@ -25,6 +25,7 @@ module.exports = function i18nTransform (code) {
         includes = [],
         excludes = [],
         name = '',
+        alias = [],
         watch,
         dependency, // {name, value, objectPattern}
         transform = true,
@@ -107,10 +108,14 @@ module.exports = function i18nTransform (code) {
             }
             recurName(path.node.callee)
             wholeCallName = wholeCallName.substring(1)
-            if (wholeCallName === name) {
-                const arg0 = path.node.arguments[0]
-                if (arg0.type === 'StringLiteral') {
-                    keyInCodes.push(arg0.value)
+            let i18nFnNames = [...alias]
+            i18nFnNames.unshift(name)
+            if (i18nFnNames.includes(wholeCallName)) {
+                if (path.node.arguments.length) {
+                    const arg0 = path.node.arguments[0]
+                    if (arg0.type === 'StringLiteral') {
+                        keyInCodes.push(arg0.value)
+                    }
                 }
             }
         },
