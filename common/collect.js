@@ -19,6 +19,7 @@ function init () {
     const defaultSetting = {
         entry: { ...defaultFile },
         output: { ...defaultFile },
+        localePattern: /[\u4e00-\u9fa5]/, // chinese
         translate: {
             on: false,
             lang: ['en'],

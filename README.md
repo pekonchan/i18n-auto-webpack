@@ -469,6 +469,23 @@ module.exports = {
 ```
 这种场景更多是的，你需要使用国际化转换函数传递更丰富的参数完成更丰富的能力、或者是带有`html`标签的字符串需要直接渲染出来的（类似`vue`的`v-html`），如果你不自己处理成写成国际化转换函数的形式，那么就会把`html`的标签也当成词条的一部分进行提取和翻译，可能会破坏你的逻辑。
 
+若你使用国际化转换函数不仅仅是用`name`指定的方式调用，还有其他方式调用， 你也想保留对应的key的词条，那么可以使用`alias`配置，指定它的其他调用方式。例如使用了`vue-i18n`，可以直接在组件中用`this.$t()`来调用转换，此时你可设置`alias: ['$t', '_vm.$t']`来保留调用它的key对应的词条：
+```
+{
+    loader: 'i18n-auto-webpack/loader',
+    options: {
+        watch: true,
+        name: 'i18n.tc',
+        alias: ['$t', '_vm.$t'],
+        dependency: {
+            name: 'i18n',
+            value: 'src/common/i18n.js'
+        }
+    }
+}
+```
+此时代码中使用`i18n.tc`和`$t`的方法内key对应的词条都将保留。
+
 此外，
 
 使用`i18n-auto-webpack`是一个提高工作效率的工具，也能相对成功找到代码中中文的词条进行替换，但是各种开发者写的各种代码，会存在各种可能性，我这边只能说把大部分常规场景都囊括进来，若你遇到特殊的写法或场景，使用该工具无法成功提取到中文，请告诉我，我将进行补充，或者你可能需要调整为直接在代码中使用国际化转换函数的写法。项目代码中存在直接使用国际化转换函数+中文（`i18n-auto-webpack`帮忙收录国际化）的场景是无法避免的。
@@ -484,10 +501,10 @@ module.exports = {
 | `output` | 生成代码中收录的词条配置表文件信息，**有以下属性：** | Object | 否 | 跟当设置了`entry`，没有设置`output`，那么跟随`entry`设置 |
 |        | `path`：配置表文件的所属路径（不含文件名） | String | 否 | 项目根目录/lang |
 |        | `filename`：配置表文件的文件名（不含路径） | String | 否 | zh.json                 |
+| `localePattern` | 收录的语言正则表达式，默认是收录中文。所以你想收录其他语言，可根据实际传入可代表其他语言的正则表达式 | RegExp | 否 | `/[\u4e00-\u9fa5]/` |
 | `translate` | 设置自动翻译相关，**有以下属性：** | Object | 否 | false，不开启自动翻译 |
 |             | `on`：是否开启翻译 | Boolean | 否 | false |
-|             | `lang`：是否开启翻译 | Boolean | 否 | false |
-|             | `on`：要翻译成哪些语言 | Array | 否 | ['en'],英文。语言的标识可参考[api](https://cloud.tencent.com/document/api/551/40566) |
+|             | `lang`：要翻译成哪些语言 | Array | 否 | ['en'],英文。语言的标识可参考[api](https://cloud.tencent.com/document/api/551/40566) |
 |             | `path`：生成的翻译文件所在目录 | String | 否 | 项目根目录/lang |
 |             | `nameRule`：生成的翻译文件名 | Function | 否 | nameRule (lang) {return lang + '.json' } |
 |             | `startTotal`：表示你已经使用了多少字符额度了，本次启动服务触发的翻译字符数，将基于这个额度上进行计算 | Number | 否 | 0 |
@@ -517,6 +534,7 @@ module.exports = {
 |            | `value`：引入的依赖的路径，可以是任意格式的路径，实际上就是一个字符串，就跟你要写在代码里的`import`或`require`方法的路径是一样的即可。注意这个值会用来判断文档当前是否已经引入过该依赖的，判断的依据是直接根据这个路径字符串完全匹配判断，而不是跟实际引入文件判断，一个文件的引入路径写法不一样，会造成判断不准 | String  | 当设置了dependency，则必填 |        |
 |            | `objectPattern`：引入的依赖的形式。若是解构格式，则需要设置为true。 | Boolean  | 否 | |
 | `name` | 替换代码中词条的实现国际化的函数调用完整路径名 | String  | 是                         |        |
+| `alias` | 替换代码中词条的实现国际化的函数调用完整路径名的别称 | Array  | 否                         |        |
 | `watch` | 是否实时监听文件变化，实时更新对应于配置表中的key值 | Boolean | 否 | false |
 | `transform` | 是否需要转换代码。若你仅仅想收录项目中的词条，而不转换代码，可设置为false | Boolean | 否 | true |
 

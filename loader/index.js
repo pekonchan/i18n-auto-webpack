@@ -14,6 +14,7 @@ const {
     addCompiledFiles,
     getKey,
     getCompileDone,
+    globalSetting,
 } = require('../common/collect')
 
 module.exports = function i18nTransform (code) {
@@ -132,7 +133,7 @@ module.exports = function i18nTransform (code) {
             }
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
-                if (/[\u4e00-\u9fa5]/.test(val)) {
+                if (globalSetting.localePattern.test(val)) {
                     const res = localeWordPattern(val)
                     if (res && res.length) {
                         if (changeOnce && res.some(word => !getKey(word))) {
@@ -150,7 +151,7 @@ module.exports = function i18nTransform (code) {
             }
         },
         TemplateLiteral (path) {
-            const hasWord = path.node.quasis.some(item => /[\u4e00-\u9fa5]/.test(item.value.raw))
+            const hasWord = path.node.quasis.some(item => globalSetting.localePattern.test(item.value.raw))
             if (!hasWord) {
                 return
             }

@@ -1,17 +1,19 @@
 const types = require('@babel/types')
+const {
+    globalSetting,
+} = require('../common/collect')
 
 // const localeWordPattern = /(\S.*)*[\u4e00-\u9fa5]+(.*\S)*/g
 
-const chinesePattern = /[\u4e00-\u9fa5]/
-
 const localeWordPattern = (word) => {
-    if (!chinesePattern.test(word)) {
+    const pattern = globalSetting.localePattern
+    if (!pattern.test(word)) {
         return null
     }
     const matches = []
     const wordByLines = word.split('\n')
     wordByLines.forEach(wordLine => {
-        if (!chinesePattern.test(wordLine)) {
+        if (!pattern.test(wordLine)) {
             return
         }
         const firstCharNotSpace = wordLine.match(/\S/)
@@ -30,7 +32,7 @@ const localeWordPattern = (word) => {
 }
 
 const createSplitNode = ({word, wordKeyMap, calle}) => {
-    if (!chinesePattern.test(word)) {
+    if (!globalSetting.localePattern.test(word)) {
         return [types.stringLiteral(word)]
     }
     const result = []
@@ -62,7 +64,7 @@ const createSplitNode = ({word, wordKeyMap, calle}) => {
 }
 
 const createT = ({originValue, wordKeyMap, calle}) => {
-    if (!chinesePattern.test(originValue)) {
+    if (!globalSetting.localePattern.test(originValue)) {
         return
     }
     const splits = []
