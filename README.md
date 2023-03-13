@@ -37,7 +37,7 @@ module.exports = {
         on: true, // 是否开启翻译
         lang: ['en'], // 要翻译成哪些语言
         path: resolve(rootPath, './lang'), // 生成的翻译文件所在目录
-        secretId: 'your secretId' // 必填。翻译api所需的你用户信息secretId 
+        secretId: 'your secretId', // 必填。翻译api所需的你用户信息secretId 
         secretKey: 'your secretKey' // 必填。翻译api所需的你用户信息secretKey
     }
 }
@@ -50,9 +50,9 @@ module.exports = {
 
 > 特殊情况下，假设你有需要生成配置文件到不同于`entry`的地方，那么可以指定`output`字段，该字段默认值就是`entry`，你也可以自己指定。但是值得注意的是，当你指定了一个不同于`entry`的值，若`entry`和`output`的文件不能保持一样，就会每次收集词条就会把`output`里比`entry`多的词条视为新增的词条，就会触发重新生成配置文件，所以当你毅然选择指定`output`，请保持手动同步更新到`entry`文件中（当然你有另外用途需要区分开来除外）。 因此我的建议是，没啥特殊情况，就只使用一个`entry`字段就好了
 
-`i18nauto.config.js`更多配置规则请查阅[`i18nauto.config.js`配置表](url)
+`i18nauto.config.js`更多配置规则请查阅[`i18nauto.config.js`配置表](https://github.com/pekonchan/i18n-auto-webpack#i18nautoconfigjs)
 
-`translate`翻译设置部份，需要有更多的说明，请查阅[配置翻译]()
+`translate`翻译设置部份，需要有更多的说明，请查阅[配置翻译](https://github.com/pekonchan/i18n-auto-webpack#%E9%85%8D%E7%BD%AE%E7%BF%BB%E8%AF%91)
 
 ### 配置loader
 在webpack的配置中进行如下设置
@@ -81,7 +81,7 @@ exports.export = {
 例子中`options`选项的为基础常用的配置：
 
 #### watch
-是否监听更新，若设置`true`，则开发者编写代码每触发一次热更新，就收集一次代码中新增的中文词条替换代码。若设置为`false`，则只对第一次启动工程构建的文件进行收集词条替换代码，后续开发中新增的不会对新增的词条进行代码替换。默认为`false`
+是否监听更新，若设置`true`，则开发者编写代码每触发一次热更新，就收集一次代码中新增的中文词条替换代码。若设置为`false`，则只对第一次启动工程构建的文件进行收集词条替换代码，后续开发中新增的不会对新增的词条进行代码替换。默认为`false`。 可多个`loader`使用不同的`watch`。
 
 #### name
 国际化语言切换函数的调用路径。例如你原本想要替换代码中的中文词条为国际化语言切换函数，怎么调用这个函数就传什么，例如`i18n.t('001')`，虽然最终执行的是`t`函数，但是你调用这个`t`需要通过`i18n`这个对象，那么完整的调用路径即为`i18n.t`，所以name要传`i18n.t`。
@@ -115,7 +115,7 @@ options: {
 // 然后代码中将会使用t()进行切换语言
 ```
 
-loader更多配置请查阅 [loader配置表](url)
+loader更多配置请查阅 [loader配置表](https://github.com/pekonchan/i18n-auto-webpack#loader)
 
 #### 注意事项
 `i18n-auto-webpack/loader`预期接收的代码是`Javascript`内容，它的工作原理是对传递进来的是`Javascript`代码解析成`AST`，然后分析`AST`查找提取中文等系列操作后再转回去`Javascript`代码。
@@ -244,7 +244,7 @@ module.exports = {
 ```
 是否监听更新，若设置`true`，则开发者编写代码每触发一次热更新，就收集一次代码中新增的中文词条更新到配置文件中。若设置为`false`，则只对第一次启动工程构建的文件进行收录词条创建配置文件，后续开发中新增的不会更新到配置文件中。默认为`false`
 
-plugin更多配置请查阅 [plugin配置表](url)
+plugin更多配置请查阅 [plugin配置表](https://github.com/pekonchan/i18n-auto-webpack#plugin)
 
 ### 配置翻译
 要开启自动翻译功能，需要在`i18nauto.config.js`中进行相应的设置。
@@ -295,7 +295,7 @@ module.exports = {
 
 其实一般来讲，每月免费额度为5百万字符是够用的，一个项目中中文大部份应该不会超过5百万字符，假设真的超过了，可以考虑分月分批翻译。
 
-为了让使用者用该工具更安心，我这边提供了两个配置项用于设置当翻译超过你指定的字符数限制时，停止调用翻译api。具体可查看 [startTotal和endTotal说明]()
+为了让使用者用该工具更安心，我这边提供了两个配置项用于设置当翻译超过你指定的字符数限制时，停止调用翻译api。具体可查看 [startTotal和endTotal说明](https://github.com/pekonchan/i18n-auto-webpack#i18nautoconfigjs)
 
 > 注意这个数量，是按照翻译语言种类来统计的。例如“你好啊”这个要翻译成英文和德文，那么就是 3 * 2 = 5，这个就消耗了5个字符的额度了。 3是中文的字符数，2的翻译成两个语种。
 
@@ -306,16 +306,16 @@ module.exports = {
 2. 要么把loader和plugin部分的`watch`配置设置为`false`，不要实时监听变化而更新；
 3. 要么把自动翻译功能关闭，选择`i18n-auto-webpack`提供的单独翻译能力`i18n-auto-webpack/translate`方法，编写命令，在你想要翻译的时候手动触发该命令进行翻译。（最稳妥方案）
 
-关于使用单独的翻译能力，请查阅下面的[`独立翻译函数`](https://note.youdao.com/)介绍
+关于使用单独的翻译能力，请查阅下面的[`独立翻译函数`](https://github.com/pekonchan/i18n-auto-webpack#%E7%8B%AC%E7%AB%8B%E7%BF%BB%E8%AF%91%E5%87%BD%E6%95%B0)介绍
 
 
-> 至此，上述介绍的配置，是可以快速实现自动化国际化的简单配置。若想了解更多功能和定制化，可继续查阅下属的[详细配置表]()
+> 至此，上述介绍的配置，是可以快速实现自动化国际化的简单配置。若想了解更多功能和定制化，可继续查阅下属的[详细配置表](https://github.com/pekonchan/i18n-auto-webpack#%E8%AF%A6%E7%BB%86%E9%85%8D%E7%BD%AE%E8%A1%A8)
 
 ### 独立翻译函数
 
 使用`i18n-auto-webpack/translate`提供的能力，能够单独编写脚本实现翻译能力。
 
-这样就能够依赖它来编写`nodejs`脚本，然后写在`npm script`里写个命令，专门在开发者基本编写好代码后，运行命令做最后的统一翻译。这样就可以关闭自动翻译，能规避翻译api的条件限制导致的一些问题（见上节内容[翻译api的限制]()）
+这样就能够依赖它来编写`nodejs`脚本，然后写在`npm script`里写个命令，专门在开发者基本编写好代码后，运行命令做最后的统一翻译。这样就可以关闭自动翻译，能规避翻译api的条件限制导致的一些问题（见上节内容[翻译api的限制](https://github.com/pekonchan/i18n-auto-webpack#%E7%BF%BB%E8%AF%91api%E7%9A%84%E9%99%90%E5%88%B6)）
 
 或者你已经做好国际化的方案了，已经实现了代码替换和收录中文了，剩下的就只有翻译工作还没做，还没生成翻译语言的配置文件，那么你也可以使用`i18n-auto-webpack/translate`来帮你完成这一步工作。
 
@@ -411,7 +411,7 @@ module.exports = {
 
 那么`i18n-auto-webpack/translate`可以帮到你，我把该工具使用到的翻译能力单独抽离出来，可以当成独立的类库进行使用。
 
-具体使用方法可参考[独立翻译函数](url)
+具体使用方法可参考[独立翻译函数](https://github.com/pekonchan/i18n-auto-webpack#%E7%8B%AC%E7%AB%8B%E7%BF%BB%E8%AF%91%E5%87%BD%E6%95%B0)
 
 ### 生成映射文件
 当你有需求想要知道项目里的哪些文件有中文词条，有什么中文词条，而且它在该文件中出现的次数是多少。
@@ -428,6 +428,68 @@ module.exports = {
 }
 ```
 
+## 特殊情况
+
+当你有不得不需要在代码中直接使用国际化转换函数的时候，你仍然可以放心大胆使用。例如
+```
+// i18n.tc是国际化转换函数
+const word = i18n.tc('1')
+```
+对应的词条表中是
+```json
+// zh.json
+{
+    "1": "你好"
+}
+```
+`i18n-auto-webpack`会自动根据你在`loader`中设置的国际化转换依赖的`name`值来判断你调用的方法是否为国际化转换函数，是的话，词条表中会为你保留对应的词条，而不会说因为代码中没有这个中文，会在词条表中删除对应的词条。当然，这时候你需要自己手动在词条表中设置对应的词条了。
+```js
+module.exports = {
+    module: {
+        rules: [
+            {
+                test: /\.js$/,
+                use: [
+                    {
+                        loader: 'i18n-auto-webpack/loader',
+                        options: {
+                            watch: true,
+                            name: 'i18n.tc', // 就是这个名字来判断
+                            dependency: {
+                                name: 'i18n',
+                                value: 'src/common/i18n.js'
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
+```
+这种场景更多是的，你需要使用国际化转换函数传递更丰富的参数完成更丰富的能力、或者是带有`html`标签的字符串需要直接渲染出来的（类似`vue`的`v-html`），如果你不自己处理成写成国际化转换函数的形式，那么就会把`html`的标签也当成词条的一部分进行提取和翻译，可能会破坏你的逻辑。
+
+若你使用国际化转换函数不仅仅是用`name`指定的方式调用，还有其他方式调用， 你也想保留对应的key的词条，那么可以使用`alias`配置，指定它的其他调用方式。例如使用了`vue-i18n`，可以直接在组件中用`this.$t()`来调用转换，此时你可设置`alias: ['$t', '_vm.$t']`来保留调用它的key对应的词条：
+```
+{
+    loader: 'i18n-auto-webpack/loader',
+    options: {
+        watch: true,
+        name: 'i18n.tc',
+        alias: ['$t', '_vm.$t'],
+        dependency: {
+            name: 'i18n',
+            value: 'src/common/i18n.js'
+        }
+    }
+}
+```
+此时代码中使用`i18n.tc`和`$t`的方法内key对应的词条都将保留。
+
+此外，
+
+使用`i18n-auto-webpack`是一个提高工作效率的工具，也能相对成功找到代码中中文的词条进行替换，但是各种开发者写的各种代码，会存在各种可能性，我这边只能说把大部分常规场景都囊括进来，若你遇到特殊的写法或场景，使用该工具无法成功提取到中文，请告诉我，我将进行补充，或者你可能需要调整为直接在代码中使用国际化转换函数的写法。项目代码中存在直接使用国际化转换函数+中文（`i18n-auto-webpack`帮忙收录国际化）的场景是无法避免的。
+
 ## 详细配置表
 
 ### i18nauto.config.js
@@ -439,10 +501,10 @@ module.exports = {
 | `output` | 生成代码中收录的词条配置表文件信息，**有以下属性：** | Object | 否 | 跟当设置了`entry`，没有设置`output`，那么跟随`entry`设置 |
 |        | `path`：配置表文件的所属路径（不含文件名） | String | 否 | 项目根目录/lang |
 |        | `filename`：配置表文件的文件名（不含路径） | String | 否 | zh.json                 |
+| `localePattern` | 收录的语言正则表达式，默认是收录中文。所以你想收录其他语言，可根据实际传入可代表其他语言的正则表达式 | RegExp | 否 | `/[\u4e00-\u9fa5]/` |
 | `translate` | 设置自动翻译相关，**有以下属性：** | Object | 否 | false，不开启自动翻译 |
 |             | `on`：是否开启翻译 | Boolean | 否 | false |
-|             | `lang`：是否开启翻译 | Boolean | 否 | false |
-|             | `on`：要翻译成哪些语言 | Array | 否 | ['en'],英文。语言的标识可参考[api](https://cloud.tencent.com/document/api/551/40566) |
+|             | `lang`：要翻译成哪些语言 | Array | 否 | ['en'],英文。语言的标识可参考[api](https://cloud.tencent.com/document/api/551/40566) |
 |             | `path`：生成的翻译文件所在目录 | String | 否 | 项目根目录/lang |
 |             | `nameRule`：生成的翻译文件名 | Function | 否 | nameRule (lang) {return lang + '.json' } |
 |             | `startTotal`：表示你已经使用了多少字符额度了，本次启动服务触发的翻译字符数，将基于这个额度上进行计算 | Number | 否 | 0 |
@@ -465,13 +527,14 @@ module.exports = {
 ### loader
 | 配置项     | 描述                                                         | 类型    | 必填                       | 默认值 |
 | ---------- | ------------------------------------------------------------ | ------- | -------------------------- | ------ |
-| `includes`   | 支持实现国际化的文件，元素值为文件的绝对路径                 | Array   | 否                         | []     |
-| `excludes`   | 排除实现国际化的文件，元素值为文件的绝对路径                 | Array   | 否                         | []     |
+| `includes`   | 支持实现国际化的文件(夹)，元素值为文件（夹）的绝对路径  ，若为文件夹地址，请以`/`结尾，则文件夹下的文件都会实现国际化。可搭配`excludes`使用，`excludes`的优先级更高。             | Array   | 否                         | []     |
+| `excludes`   | 排除实现国际化的文件(夹)，元素值为文件（夹）的绝对路径  ，若为文件夹地址，请以`/`结尾，则文件夹下的文件都会被排除。可搭配`includes`使用，`excludes`的优先级更高。                 | Array   | 否                         | []     |
 | `dependency` | 转译成国际化所需代码时，若你需要在这个文件中引入某些依赖，则可用该配置。目前只支持引入单个文件，后续需优化成支持多个，数组形式。有以下属性： | Object  | 否                         |        |
 |            | `name`：引入的依赖所赋予的变量名，如`import name from 'xxx'`，就是这里的`name` | String  | 当设置了dependency，则必填 |        |
 |            | `value`：引入的依赖的路径，可以是任意格式的路径，实际上就是一个字符串，就跟你要写在代码里的`import`或`require`方法的路径是一样的即可。注意这个值会用来判断文档当前是否已经引入过该依赖的，判断的依据是直接根据这个路径字符串完全匹配判断，而不是跟实际引入文件判断，一个文件的引入路径写法不一样，会造成判断不准 | String  | 当设置了dependency，则必填 |        |
 |            | `objectPattern`：引入的依赖的形式。若是解构格式，则需要设置为true。 | Boolean  | 否 | |
 | `name` | 替换代码中词条的实现国际化的函数调用完整路径名 | String  | 是                         |        |
+| `alias` | 替换代码中词条的实现国际化的函数调用完整路径名的别称 | Array  | 否                         |        |
 | `watch` | 是否实时监听文件变化，实时更新对应于配置表中的key值 | Boolean | 否 | false |
 | `transform` | 是否需要转换代码。若你仅仅想收录项目中的词条，而不转换代码，可设置为false | Boolean | 否 | true |
 

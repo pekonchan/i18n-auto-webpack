@@ -14,6 +14,7 @@ const {
     addCompiledFiles,
     getKey,
     getCompileDone,
+    globalSetting,
 } = require('../common/collect')
 
 module.exports = function i18nTransform (code) {
@@ -25,6 +26,7 @@ module.exports = function i18nTransform (code) {
         includes = [],
         excludes = [],
         name = '',
+        alias = [],
         watch,
         dependency, // {name, value, objectPattern}
         transform = true,
@@ -73,7 +75,7 @@ module.exports = function i18nTransform (code) {
             let nameMatched = false
             const initNodeCallee = initNode.callee
             if (initNodeCallee.type === 'Identifier' && initNodeCallee.name === 'require') {
-                const args = path.node.arguments
+                const args = initNode.arguments
                 if (args.length && dependency.value === args[0].value) {
                     valueMatched = true
                 }
@@ -107,10 +109,14 @@ module.exports = function i18nTransform (code) {
             }
             recurName(path.node.callee)
             wholeCallName = wholeCallName.substring(1)
-            if (wholeCallName === name) {
-                const arg0 = path.node.arguments[0]
-                if (arg0.type === 'StringLiteral') {
-                    keyInCodes.push(arg0.value)
+            let i18nFnNames = [...alias]
+            i18nFnNames.unshift(name)
+            if (i18nFnNames.includes(wholeCallName)) {
+                if (path.node.arguments.length) {
+                    const arg0 = path.node.arguments[0]
+                    if (arg0.type === 'StringLiteral') {
+                        keyInCodes.push(arg0.value)
+                    }
                 }
             }
         },
@@ -127,8 +133,8 @@ module.exports = function i18nTransform (code) {
             }
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
-                if (/[\u4e00-\u9fa5]/.test(val)) {
-                    const res = val.match(localeWordPattern)
+                if (globalSetting.localePattern.test(val)) {
+                    const res = localeWordPattern(val)
                     if (res && res.length) {
                         if (changeOnce && res.some(word => !getKey(word))) {
                             return
@@ -145,7 +151,7 @@ module.exports = function i18nTransform (code) {
             }
         },
         TemplateLiteral (path) {
-            const hasWord = path.node.quasis.some(item => /[\u4e00-\u9fa5]/.test(item.value.raw))
+            const hasWord = path.node.quasis.some(item => globalSetting.localePattern.test(item.value.raw))
             if (!hasWord) {
                 return
             }

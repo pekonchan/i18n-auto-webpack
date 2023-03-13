@@ -1,33 +1,79 @@
 const types = require('@babel/types')
+const {
+    globalSetting,
+} = require('../common/collect')
 
-const localeWordPattern = /(\S.*)*[\u4e00-\u9fa5]+(.*\S)*/g
+// const localeWordPattern = /(\S.*)*[\u4e00-\u9fa5]+(.*\S)*/g
+
+const localeWordPattern = (word) => {
+    const pattern = globalSetting.localePattern
+    if (!pattern.test(word)) {
+        return null
+    }
+    const matches = []
+    const wordByLines = word.split('\n')
+    wordByLines.forEach(wordLine => {
+        if (!pattern.test(wordLine)) {
+            return
+        }
+        const firstCharNotSpace = wordLine.match(/\S/)
+        const lastSpace = wordLine.match(/\s+$/)
+        const firstCharNotSpaceIndex = firstCharNotSpace.index
+        let wordMatchPart = ''
+        if (lastSpace) {
+            wordMatchPart = wordLine.substring(firstCharNotSpaceIndex, lastSpace.index)
+        } else {
+            wordMatchPart = wordLine.substring(firstCharNotSpaceIndex)
+        }
+        matches.push(wordMatchPart)
+    })
+
+    return matches
+}
+
+const createSplitNode = ({word, wordKeyMap, calle}) => {
+    if (!globalSetting.localePattern.test(word)) {
+        return [types.stringLiteral(word)]
+    }
+    const result = []
+    const firstCharNotSpace = word.match(/\S/)
+    const lastSpace = word.match(/\s+$/)
+    const firstCharNotSpaceIndex = firstCharNotSpace.index
+    let leftPart = ''
+    let wordMatchPart = ''
+    let rightPart = ''
+    if (firstCharNotSpaceIndex !== 0) {
+        leftPart = types.stringLiteral(word.substring(0, firstCharNotSpaceIndex))
+    }
+    if (lastSpace) {
+        wordMatchPart = word.substring(firstCharNotSpaceIndex, lastSpace.index)
+        rightPart = types.stringLiteral(word.substring(lastSpace.index))
+    } else {
+        wordMatchPart = word.substring(firstCharNotSpaceIndex)
+    }
+    wordMatchPart = types.callExpression(
+        types.identifier(calle),
+        [
+            types.stringLiteral('' + wordKeyMap[wordMatchPart])
+        ]
+    )
+    leftPart && result.push(leftPart)
+    result.push(wordMatchPart)
+    rightPart && result.push(rightPart)
+    return result
+}
 
 const createT = ({originValue, wordKeyMap, calle}) => {
-    let matchResults = localeWordPattern.exec(originValue)
-    let splits = []
-    let lastIndex = 0
-    let stringLeft = ''
-    while (matchResults) {
-        if (lastIndex !== matchResults.index) {
-            const node = types.stringLiteral(originValue.substring(lastIndex, matchResults.index))
-            splits.push(node)
-        }
-        const matchedWord = originValue.substring(matchResults.index, localeWordPattern.lastIndex)
-        const callNode = types.callExpression(
-            types.identifier(calle),
-            [
-                types.stringLiteral('' + wordKeyMap[matchedWord])
-            ]
-        )
-        splits.push(callNode)
-        stringLeft = originValue.substring(localeWordPattern.lastIndex)
-        lastIndex = localeWordPattern.lastIndex
-        matchResults = localeWordPattern.exec(originValue)
+    if (!globalSetting.localePattern.test(originValue)) {
+        return
     }
-    if (stringLeft) {
-        const node = types.stringLiteral(stringLeft)
-        splits.push(node)
-    }
+    const splits = []
+    const wordByLines = originValue.split('\n')
+    wordByLines.forEach(wordLine => {
+        const res = createSplitNode({word: wordLine, wordKeyMap, calle})
+        splits.push(...res)
+    })
+
     if (!splits.length) {
         return
     }
