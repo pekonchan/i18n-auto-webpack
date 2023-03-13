@@ -73,7 +73,7 @@ module.exports = function i18nTransform (code) {
             let nameMatched = false
             const initNodeCallee = initNode.callee
             if (initNodeCallee.type === 'Identifier' && initNodeCallee.name === 'require') {
-                const args = path.node.arguments
+                const args = initNode.arguments
                 if (args.length && dependency.value === args[0].value) {
                     valueMatched = true
                 }
@@ -128,7 +128,7 @@ module.exports = function i18nTransform (code) {
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
                 if (/[\u4e00-\u9fa5]/.test(val)) {
-                    const res = val.match(localeWordPattern)
+                    const res = localeWordPattern(val)
                     if (res && res.length) {
                         if (changeOnce && res.some(word => !getKey(word))) {
                             return

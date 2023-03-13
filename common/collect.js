@@ -57,10 +57,10 @@ function init () {
         if (defaultSetting.translate.on && !setting.translate.path) {
             defaultSetting.translate.path = defaultSetting.output.path
         }
-        globalSetting = defaultSetting
     } catch (e) {
         console.warn('Lack of "i18nauto.config.js" file, use the default config...')
     }
+    globalSetting = defaultSetting
 
     const {path: entryPath, filename} = globalSetting.entry
     const entryFile = resolve(entryPath, filename)
