@@ -111,14 +111,22 @@ module.exports = function i18nTransform (code) {
             wholeCallName = wholeCallName.substring(1)
             let i18nFnNames = [...alias]
             i18nFnNames.unshift(name)
-            if (i18nFnNames.includes(wholeCallName)) {
-                if (path.node.arguments.length) {
-                    const arg0 = path.node.arguments[0]
-                    if (arg0.type === 'StringLiteral') {
-                        keyInCodes.push(arg0.value)
+            i18nFnNames.forEach(fnName => {
+                let matched = false
+                if (Object.prototype.toString.call(fnName) === '[object RegExp]') {
+                    matched = fnName.test(wholeCallName)
+                } else if (fnName === wholeCallName) {
+                    matched = true
+                }
+                if (matched) {
+                    if (path.node.arguments.length) {
+                        const arg0 = path.node.arguments[0]
+                        if (arg0.type === 'StringLiteral') {
+                            keyInCodes.push(arg0.value)
+                        }
                     }
                 }
-            }
+            })
         },
         StringLiteral (path) {
             const { type: parentType, callee: parentCallee } = path.parent

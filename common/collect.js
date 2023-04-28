@@ -20,6 +20,7 @@ function init () {
         entry: { ...defaultFile },
         output: { ...defaultFile },
         localePattern: /[\u4e00-\u9fa5]/, // chinese
+        keyRule: null,
         translate: {
             on: false,
             lang: ['en'],
@@ -81,36 +82,50 @@ function init () {
 }
 init()
 
-const setConfig = (value) => {
-    let currentKey = getKey(value)
-    if (currentKey) {
-        return currentKey
-    } else {
-        const max = (Object.keys(localeWordConfig).sort((a,b) => b-a))[0]
-        let isAdded = false
-        for (let i = 0; i < max; i++) {
-            if (!localeWordConfig[i]) {
-                localeWordConfig[i] = value
-                isAdded = true
-                currentKey = (i + '')
-                break
-            }
-        }
-        if (isAdded) {
-            return currentKey
-        } else {
-            const len = Object.keys(localeWordConfig).length
-            return addConfig(len, value)
-        }
-    }
-}
-
 const addConfig = (key, value) => {
     if (localeWordConfig[key]) {
         return addConfig(++key, value)
     } else {
         localeWordConfig[key] = value
         return key + ''
+    }
+}
+
+/**
+ * Default rule to set the key for new word
+ * @returns 
+ */
+const defaultKeyRule = (value) => {
+    const max = (Object.keys(localeWordConfig).sort((a,b) => b-a))[0]
+    let isAdded = false
+    for (let i = 0; i < max; i++) {
+        if (!localeWordConfig[i]) {
+            localeWordConfig[i] = value
+            isAdded = true
+            currentKey = (i + '')
+            break
+        }
+    }
+    if (isAdded) {
+        return currentKey
+    } else {
+        const len = Object.keys(localeWordConfig).length
+        return addConfig(len, value)
+    }
+}
+
+const setConfig = (value) => {
+    let currentKey = getKey(value)
+    if (currentKey) {
+        return currentKey
+    } else {
+        if (globalSetting.keyRule) {
+            const newKey = globalSetting.keyRule(value, localeWordConfig)
+            localeWordConfig[newKey] = value
+            return newKey
+        } else {
+            return defaultKeyRule(value)
+        }
     }
 }
 
