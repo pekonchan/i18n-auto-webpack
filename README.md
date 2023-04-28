@@ -506,6 +506,7 @@ module.exports = {
 |        | `path`：配置表文件的所属路径（不含文件名） | String | 否 | 项目根目录/lang |
 |        | `filename`：配置表文件的文件名（不含路径） | String | 否 | zh.json                 |
 | `localePattern` | 收录的语言正则表达式，默认是收录中文。所以你想收录其他语言，可根据实际传入可代表其他语言的正则表达式 | RegExp | 否 | `/[\u4e00-\u9fa5]/` |
+| `keyRule` | 可自定义key的生成规则，接受两个入参，如`nameRule (value, config) {}`，`value`为收集到的词条，`config`为当前的词条表对象，必须返回一个值表示新的key值 | Function | 否 | `null` |
 | `translate` | 设置自动翻译相关，**有以下属性：** | Object | 否 | false，不开启自动翻译 |
 |             | `on`：是否开启翻译 | Boolean | 否 | false |
 |             | `lang`：要翻译成哪些语言 | Array | 否 | ['en'],英文。语言的标识可参考[api](https://cloud.tencent.com/document/api/551/40566) |
@@ -538,7 +539,7 @@ module.exports = {
 |            | `value`：引入的依赖的路径，可以是任意格式的路径，实际上就是一个字符串，就跟你要写在代码里的`import`或`require`方法的路径是一样的即可。注意这个值会用来判断文档当前是否已经引入过该依赖的，判断的依据是直接根据这个路径字符串完全匹配判断，而不是跟实际引入文件判断，一个文件的引入路径写法不一样，会造成判断不准 | String  | 当设置了dependency，则必填 |        |
 |            | `objectPattern`：引入的依赖的形式。若是解构格式，则需要设置为true。 | Boolean  | 否 | |
 | `name` | 替换代码中词条的实现国际化的函数调用完整路径名 | String  | 是                         |        |
-| `alias` | 替换代码中词条的实现国际化的函数调用完整路径名的别称 | Array  | 否                         |        |
+| `alias` | 替换代码中词条的实现国际化的函数调用完整路径名的别称。数组元素支持字符串和正则表达式 | Array  | 否                         |        |
 | `watch` | 是否实时监听文件变化，实时更新对应于配置表中的key值 | Boolean | 否 | false |
 | `transform` | 是否需要转换代码。若你仅仅想收录项目中的词条，而不转换代码，可设置为false | Boolean | 否 | true |
 
