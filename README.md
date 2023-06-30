@@ -121,6 +121,16 @@ options: {
 
 loader更多配置请查阅 [loader配置表](https://github.com/pekonchan/i18n-auto-webpack#loader)
 
+> 如果你出现首次运行该工具收集的词条是正常的，但是后续再次收集发现少了，那么可能是受限于构建脚手架或者webpack某个版本的影响，对编译结果进行了缓存，导致无法收集。你可尝试禁用webpack的cache-loader缓存看看，如下所示
+
+```
+ // 禁用缓存 
+ // webpack-chain写法
+config.module.rule('vue').uses.delete('cache-loader');
+config.module.rule('js').uses.delete('cache-loader');
+config.module.rule('ts').uses.delete('cache-loader');
+```
+
 #### 注意事项
 `i18n-auto-webpack/loader`预期接收的代码是`Javascript`内容，它的工作原理是对传递进来的是`Javascript`代码解析成`AST`，然后分析`AST`查找提取中文等系列操作后再转回去`Javascript`代码。
 
