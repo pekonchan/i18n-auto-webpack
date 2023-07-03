@@ -45,6 +45,34 @@ module.exports = function i18nTransform (code) {
         sourceType: 'unambiguous'
     })
 
+    function isInConsole (path) {
+        const { type: parentType, callee: parentCallee } = path.parent
+        if (parentType === 'CallExpression' && parentCallee.type === 'MemberExpression') {
+            const parentCalleeObject = parentCallee.object
+            if (parentCalleeObject.type === 'Identifier' && parentCalleeObject.name === 'console') {
+                return true
+            }
+        }
+        return false
+    }
+    function findCommentExclude(path) {
+        //If from TemplateLiteral to StringLiteral
+        if (!path.node.loc) {
+            return false
+        }
+        const startLine = path.node.loc.start.line
+        const leadingComments = path.node.leadingComments
+        const check = (commentList) => {
+            if (commentList && commentList.length) {
+                const end = commentList.some(comment => {
+                    return comment.type === 'CommentBlock' && comment.value.trim() === 'no-i18n-auto' && comment.loc.start.line === startLine
+                })
+                return end
+            }
+        }
+        return (check(leadingComments) || check(ast.comments))
+    }
+
     const visitor = {
         // Finds if the user's dependency is in the import declaration
         ImportDeclaration (path) {
@@ -129,15 +157,15 @@ module.exports = function i18nTransform (code) {
             })
         },
         StringLiteral (path) {
-            const { type: parentType, callee: parentCallee } = path.parent
-            if (parentType === 'ImportDeclaration') {
+            if (path.parent.type === 'ImportDeclaration') {
                 return
             }
-            if (parentType === 'CallExpression' && parentCallee.type === 'MemberExpression') {
-                const parentCalleeObject = parentCallee.object
-                if (parentCalleeObject.type === 'Identifier' && parentCalleeObject.name === 'console') {
-                    return
-                }
+            if (findCommentExclude(path)) {
+                return
+            }
+            
+            if (isInConsole(path)) {
+                return
             }
             if (path.node.type === 'StringLiteral') {
                 const val = path.node.value
@@ -159,6 +187,12 @@ module.exports = function i18nTransform (code) {
             }
         },
         TemplateLiteral (path) {
+            if (findCommentExclude(path)) {
+                return
+            }
+            if (isInConsole(path)) {
+                return
+            }
             const hasWord = path.node.quasis.some(item => globalSetting.localePattern.test(item.value.raw))
             if (!hasWord) {
                 return
