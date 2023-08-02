@@ -97,17 +97,18 @@ const addConfig = (key, value) => {
  */
 const defaultKeyRule = (value) => {
     const max = (Object.keys(localeWordConfig).sort((a,b) => b-a))[0]
+    let key = ''
     let isAdded = false
     for (let i = 0; i < max; i++) {
         if (!localeWordConfig[i]) {
             localeWordConfig[i] = value
             isAdded = true
-            currentKey = (i + '')
+            key = (i + '')
             break
         }
     }
     if (isAdded) {
-        return currentKey
+        return key
     } else {
         const len = Object.keys(localeWordConfig).length
         return addConfig(len, value)
