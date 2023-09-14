@@ -1,6 +1,6 @@
 {
   "name": "i18n-auto-webpack",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "This is a tools to help you work i18n automatically in webpack. It includs two part: plugin and loader",
   "main": "index.js",
   "scripts": {
