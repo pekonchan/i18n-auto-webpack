@@ -214,7 +214,10 @@ module.exports = function i18nTransform (code) {
                     unshiftIndex === -1 ? sections.push(element) : sections.splice(unshiftIndex, 0, element)
                 }
             })
-            const code = sections.map(item => item.value).join('+')
+            let code = sections.map(item => item.value).join('+')
+            code.indexOf('\n') !== -1 && (code = code.replace(/\n/g, '\\n'))
+            code.indexOf('\r') !== -1 && (code = code.replace(/\r/g, '\\r'))
+            code.indexOf('\t') !== -1 && (code = code.replace(/\t/g, '\\t'))
             path.replaceWithSourceString(code)
         }
     }
