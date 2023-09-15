@@ -30,8 +30,9 @@ module.exports = function i18nTransform (code) {
         watch,
         dependency, // {name, value, objectPattern}
         transform = true,
+        fallback = false,
     } = getOptions(this) || {}
-    
+
     const hasCompiled = getCompileDone()
     const changeOnce = !watch && hasCompiled
 
@@ -163,7 +164,7 @@ module.exports = function i18nTransform (code) {
             if (findCommentExclude(path)) {
                 return
             }
-            
+
             if (isInConsole(path)) {
                 return
             }
@@ -172,7 +173,7 @@ module.exports = function i18nTransform (code) {
                 if (globalSetting.localePattern.test(val)) {
                     const res = localeWordPattern(val)
                     if (res && res.length) {
-                        if (changeOnce && res.some(word => !getKey(word))) {
+                        if ((changeOnce || fallback) && res.some(word => !getKey(word))) {
                             return
                         }
                         const wordKeyMap = {}
