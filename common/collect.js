@@ -40,7 +40,12 @@ function init () {
     }
 
     try {
-        const setting = require(rootPath + '/i18nauto.config.js')
+        let setting = {}
+        try {
+            setting = require(rootPath + '/local.i18nauto.config.js')
+        } catch (e) {
+            setting = require(rootPath + '/i18nauto.config.js')
+        }
         if (setting.entry && !setting.output) {
             Object.assign(defaultSetting.output, setting.entry)
         }
@@ -67,7 +72,7 @@ function init () {
     const {path: entryPath, filename} = globalSetting.entry
     const entryFile = resolve(entryPath, filename)
     globalSetting.entryFile = entryFile
-    
+
     try {
         const exsitConfig = require(entryFile)
         for (const key in exsitConfig) {
@@ -93,7 +98,7 @@ const addConfig = (key, value) => {
 
 /**
  * Default rule to set the key for new word
- * @returns 
+ * @returns
  */
 const defaultKeyRule = (value) => {
     const max = (Object.keys(localeWordConfig).sort((a,b) => b-a))[0]
@@ -167,7 +172,7 @@ const setCurrentCompileResourceMap = (path, collection, keyInCodes) => {
     } else if (collection.length === 0 && !firstCompileDone) {
         return
     }
-    
+
     collection.forEach(item => {
         const key = Object.keys(item)[0]
         const val = item[key]
@@ -195,7 +200,7 @@ const setCurrentCompileResourceMap = (path, collection, keyInCodes) => {
 const updateResourceMap = () => {
     let configNeedUpdate = false
     let sourceMapNeedUpdate = false
-    
+
     for (const path in currentCompileResourceMap) {
         const newPathtMap = currentCompileResourceMap[path]
         const lastPathMap = resourceMap[path]
@@ -225,7 +230,7 @@ const updateResourceMap = () => {
         }
     }
     currentCompileResourceMap = {}
-    
+
     if (!firstCompileDone) {
         const newConfig = createConfigbyMap()
         let oldConfig = {}
