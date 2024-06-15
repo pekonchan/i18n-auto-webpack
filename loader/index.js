@@ -207,9 +207,10 @@ module.exports = function i18nTransform (code) {
             path.node.quasis.forEach(node => {
                 const string = node.value.raw
                 if (string) {
+                    const _string = string.replace(/"/g, '\\"')
                     const element = {
                         start: node.start,
-                        value: '"' + string + '"'
+                        value: '"' + _string + '"'
                     }
                     const unshiftIndex = sections.findIndex(item => node.start < item.start)
                     unshiftIndex === -1 ? sections.push(element) : sections.splice(unshiftIndex, 0, element)
