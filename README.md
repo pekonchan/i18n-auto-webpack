@@ -20,6 +20,8 @@
 
 ## Usage
 
+[demo工程](https://github.com/pekonchan/i18n-auto-webpack-demo)
+
 ### 安装
 ```
 npm i i18n-auto-webpack
