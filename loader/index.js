@@ -201,7 +201,7 @@ module.exports = function i18nTransform (code) {
             let sections = path.node.expressions.map(node => {
                 return {
                     start: node.start,
-                    value: generator.default(node).code
+                    value: `(${generator.default(node).code})`
                 }
             })
             path.node.quasis.forEach(node => {
