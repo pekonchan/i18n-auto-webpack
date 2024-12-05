@@ -60,7 +60,7 @@ module.exports = function i18nTransform (code) {
         //If from TemplateLiteral to StringLiteral
         if (!path.node.loc) {
             return false
-        }
+        } 
         const startLine = path.node.loc.start.line
         const leadingComments = path.node.leadingComments
         const check = (commentList) => {
@@ -71,7 +71,14 @@ module.exports = function i18nTransform (code) {
                 return end
             }
         }
-        return (check(leadingComments) || check(ast.comments))
+        return (check(leadingComments) || check(ast.comments) || isInCreateCommentVNode(path))
+    }
+
+    
+    function isInCreateCommentVNode(path) {
+        return path.parent.type == 'CallExpression'
+            && path.parent.callee.type == 'Identifier'
+            && path.parent.callee.name == '_createCommentVNode'
     }
 
     const visitor = {
